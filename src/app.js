@@ -8,18 +8,23 @@ const app = express();
 const DesignationRoutes = require("./routes/DesignationRoutes");
 const User = require("./models/User");
 const bcrypt = require('bcrypt');
-const UserRegistrationController = require("./controllers/UserRegistrationController");
+const UserController = require("./controllers/UserController");
+const AuthController = require("./controllers/authController");
+const {authRouter} = require("./routes/authRoutes");
+const {resetPasswordRouter} = require("./routes/resetPasswordRoutes");
 
 app.use(express.json());
-app.use(cors());
 
+app.use(cors({
+    origin: process.env.CLIENT_URL.toString(),
+    exposedHeaders: ['Authorization']
+}));
 
 connectToDB();
 
+app.use("/",authRouter);
 
+app.use("/password",resetPasswordRouter);
 
-app.use("/designations", DesignationRoutes);
-
-app.post("/user",UserRegistrationController.registerUser);
 
 module.exports = app;

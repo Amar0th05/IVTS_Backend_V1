@@ -60,13 +60,13 @@ class User{
 
     isValidEmail() {
         if (!this._mail || typeof this._mail !== 'string') {
-            return false; // Ensure _mail is a non-empty string
+            return false;
         }
     
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(this._mail.toLowerCase());
     }
-   
+
 
 }
 

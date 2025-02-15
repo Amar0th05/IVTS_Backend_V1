@@ -1,12 +1,26 @@
-const { sql, connectToDB } = require("../config/dbconfig");
+const { sql,getPool, connectToDB } = require("../config/dbconfig");
 const Designation = require("../models/Designation.js");
+
+let pool;
+
+(
+    async ()=>{
+        try{
+            pool=await getPool();
+
+        }catch(error){
+            console.error("connection error: ",error);
+        }
+    }
+)();
 
 async function getAllDesignations(req, res) {
     const { status } = req.query;
     let isActive;
     try {
         let query = "SELECT * FROM mmt_designation";
-        const request = new sql.Request();
+
+        const request = pool.request();
         if (status) {
             isActive = status === 'active' ? 1 : 0;
             query += " WHERE status = @status";
@@ -29,10 +43,13 @@ async function getAllDesignations(req, res) {
 async function getDesignationById(req, res) {
     try {
         const { id } = req.params;
-        const request = new sql.Request(); 
+
+
+
+        const request = pool.request();
 
         
-        request.input('des_id', sql.Int, id); 
+        request.input('des_id', sql.Int, id);
 
        
         const result = await request.query(`SELECT * FROM mmt_designation WHERE des_id=@des_id`);
@@ -73,7 +90,7 @@ async function getDesignationById(req, res) {
 async function toggleStatus(req,res){
     try{
         const {id}=req.params;
-        const request=new sql.Request();
+        const request=pool.request();
         request.input('des_id',sql.Int,id);
         
         const result=await request.query(`UPDATE mmt_designation SET status = CASE 
@@ -95,7 +112,13 @@ async function updateDesignation(req, res) {
     try {
         const { id } = req.params;
         const { name } = req.body;
-        const result = await sql.query(`UPDATE mmt_designation SET designation=@name WHERE des_id=@des_id`, { name: name, des_id: id });
+
+        const request = pool.request();
+
+        request.input('des_id',sql.Int,id);
+        request.input('name',sql.NVarChar(50),name);
+
+        const result = await request.query(`UPDATE mmt_designation SET designation=@name WHERE des_id=@des_id`);
         if (result.rowsAffected > 0) {
             res.json({ message: "Designation updated successfully" });
         } else {
@@ -116,11 +139,15 @@ async function createDesignation(req, res) {
 
         const cleanName = name.trim();
 
-        const result = await sql.query(`
+        const request = pool.request();
+
+        request.input('name',sql.NVarChar(50),cleanName)
+
+        const result = await request.query(`
             INSERT INTO mmt_designation (designation, status)
             OUTPUT INSERTED.des_id, INSERTED.designation, INSERTED.status, INSERTED.created_on 
             VALUES (@name, 1);
-        `, { name: cleanName });
+        `);
 
         if (result.recordset.length > 0) {
             const { des_id, designation, status, created_on } = result.recordset[0];
@@ -137,7 +164,10 @@ async function createDesignation(req, res) {
 
 async function getAllActiveDesignations(req, res) {
     try {
-        const result = await sql.query`SELECT * FROM mmt_designation WHERE status=1`;
+
+        const request = pool.request();
+
+        const result = await request.query`SELECT * FROM mmt_designation WHERE status=1`;
         const data = result.recordset.map(row => new Designation(row.des_id, row.designation, row.created_on, row.status));
         res.json(data);
     } catch (err) {

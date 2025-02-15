@@ -15,13 +15,24 @@ const config = {
     port: 1433,
 };
 
+let poolPromise;
+
 const connectToDB = async () => {
     try {
-        await sql.connect(config);
+        const pool=await sql.connect(config);
         console.log("Connected to SQL Server...");
+        poolPromise = Promise.resolve(pool);
     } catch (err) {
         console.error("Database connection failed:", err);
+        process.exit(1);
     }
 };
 
-module.exports = { sql, connectToDB };
+const getPool=async()=>{
+    if(!poolPromise){
+        await connectToDB();
+    }
+    return poolPromise;
+};
+
+module.exports = { sql, connectToDB, getPool };
