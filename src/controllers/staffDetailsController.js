@@ -381,6 +381,23 @@ async function toggleStaffStatus(req, res) {
     }
 }
 
+async function getActiveStaff(req, res) {
+    try {
+        const pool = await getPool(req);
+
+        const query = `SELECT staff_id, staff_name FROM tbl_staff WHERE status = 1;`;
+        const result = await pool.query(query);
+
+        if (result.recordset.length > 0) {
+            return res.status(200).json({ staffs: result.recordset });
+        } else {
+            return res.status(404).json({ error: "No active staff found" });
+        }
+    } catch (error) {
+        console.error("Error fetching active staff:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
 
 
 module.exports={
@@ -389,5 +406,6 @@ module.exports={
     addStaffDetails,
     toggleStaffStatus,
     getUserByIdWithoutJoin,
-    updateStaffDetails
+    updateStaffDetails,
+    getActiveStaff
 }

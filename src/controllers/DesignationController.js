@@ -167,8 +167,10 @@ async function getAllActiveDesignations(req, res) {
 
         const request = pool.request();
 
-        const result = await request.query`SELECT * FROM mmt_designation WHERE status=1`;
-        const data = result.recordset.map(row => new Designation(row.des_id, row.designation, row.created_on, row.status));
+        const result = await request.query`SELECT des_id,designation FROM mmt_designation WHERE status=1`;
+        if(result.recordset.length > 0) {
+            return res.json({designations: result.recordset});
+        }
         res.json(data);
     } catch (err) {
         console.error(err);
