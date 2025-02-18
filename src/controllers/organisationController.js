@@ -6,16 +6,16 @@ let pool;
     try{
         pool = await getPool();
     }catch(err){
-        console.error('Error while getting pool in staff details controller', err);
+        console.error('error getting pool (organizatinController) : ', err);
     }
 })();
 
 async function getActiveOrganisations(req, res) {
     try {
-        const pool = await getPool(req);
+        const request = await pool.request();
 
         const query = `SELECT org_id,organisation_name FROM mmt_organisation WHERE status=1;`;
-        const result = await pool.query(query);
+        const result = await request.query(query);
 
         if (result.recordset.length > 0) {
 

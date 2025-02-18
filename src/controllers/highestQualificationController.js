@@ -12,10 +12,10 @@ let pool;
 
 async function getActiveHigestQualifications(req, res) {
     try {
-        const pool = await getPool(req);
+        const request = await pool.request();
 
         const query = `SELECT qual_id,highest_qualification FROM mmt_highest_qualification WHERE status=1;;`;
-        const result = await pool.query(query);
+        const result = await request.query(query);
 
         if (result.recordset.length > 0) {
 

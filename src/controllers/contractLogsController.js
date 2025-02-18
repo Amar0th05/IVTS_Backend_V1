@@ -8,7 +8,7 @@ let pool;
     try{
         pool = await getPool();
     }catch(err){
-        console.error('Error while getting pool in staff details controller', err);
+        console.log(err);
     }
 })();
 
@@ -114,7 +114,7 @@ async function getContractLogById(req, res) {
 
         const result = await request.query(query);
         if (result.recordset.length > 0) {
-            return res.json({ contractLog: result.recordset });
+            return res.json({ contractLog: result.recordset[0] });
         } else {
             return res.status(404).json({ message: 'No records found' });
         }
@@ -200,14 +200,18 @@ async function updateContractLogs(req, res) {
         const request = pool.request();
         const { data } = req.body;
 
+        console.log(data);
+
         if (!data) return res.status(400).json({ message: 'No inputs found' });
+        if (!data.staffID) return res.status(400).json({ message: 'staff id ID is required' });
 
         let updates = [];
 
-        if (data.empID !== undefined) {
+
+
             updates.push("emp_id = @empID");
-            request.input('empID', sql.NVarChar(20), data.empID);
-        }
+            request.input('empID', sql.NVarChar(20), data.staffID);
+
 
         if (data.contractStartDate !== undefined) {
             updates.push("contract_start_date = @contractStartDate");
@@ -233,7 +237,6 @@ async function updateContractLogs(req, res) {
             updates.push("gross_pay = @grossPay");
             request.input('grossPay', sql.Decimal(10, 2), data.grossPay);
         }
-
         if (data.currentDesignation !== undefined) {
             updates.push("current_designation = @currentDesignation");
             request.input('currentDesignation', sql.Int, data.currentDesignation);
@@ -243,8 +246,10 @@ async function updateContractLogs(req, res) {
             return res.status(400).json({ message: 'No fields provided for update' });
         }
 
-        const query = `UPDATE tbl_contract_logs SET ${updates.join(", ")}`;
+
+        const query = `UPDATE tbl_contract_logs SET ${updates.join(", ")} WHERE emp_id = @empID`;
         const result = await request.query(query);
+
 
         if (result.rowsAffected[0] === 0) {
             return res.status(404).json({ message: "No matching records found to update" });
@@ -256,6 +261,8 @@ async function updateContractLogs(req, res) {
         res.status(500).json({ message: "Server error" });
     }
 }
+
+
 
 
 module.exports={

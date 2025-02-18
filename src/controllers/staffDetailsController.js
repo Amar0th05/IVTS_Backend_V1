@@ -43,7 +43,7 @@ async function getAllStaffDetails(req, res){
 }
 
 
-async function getUserById(req,res){
+async function getStaffById(req, res){
 
     const id= req.params.id;
 
@@ -98,7 +98,7 @@ async function getUserById(req,res){
     }
 }
 
-async function getUserByIdWithoutJoin(req,res){
+async function getStaffByIdWithoutJoin(req, res){
 
     const id= req.params.id;
 
@@ -347,10 +347,10 @@ async function updateStaffDetails(req, res) {
             return res.status(404).json({ message: "Staff ID not found" });
         }
 
-        res.json({ message: "Staff details updated successfully" });
+        return res.json({ message: "Staff details updated successfully" });
     } catch (err) {
         console.error("Error updating staff details:", err);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "Server error" });
     }
 }
 
@@ -402,10 +402,10 @@ async function getActiveStaff(req, res) {
 
 module.exports={
     getAllStaffDetails,
-    getUserById,
+    getUserById: getStaffById,
     addStaffDetails,
     toggleStaffStatus,
-    getUserByIdWithoutJoin,
+    getUserByIdWithoutJoin: getStaffByIdWithoutJoin,
     updateStaffDetails,
     getActiveStaff
 }

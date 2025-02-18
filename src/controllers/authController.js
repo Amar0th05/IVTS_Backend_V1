@@ -21,7 +21,11 @@ async function login(req, res) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        const isPasswordValid = await verify(password, user.password);
+        if(user.status === false){
+            return res.status(401).json({ message: "User is not active" });
+        }
+
+        const isPasswordValid = verify(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
@@ -29,6 +33,7 @@ async function login(req, res) {
         const token = generateToken({ mail: user.mail });
 
         res.header('Authorization', `Bearer ${token}`);
+        console.log('token', token);
         res.status(200).json({ message: "Login Successful" });
     } catch (err) {
         console.error("Login Error:", err);

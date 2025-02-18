@@ -12,10 +12,10 @@ let pool;
 
 async function getActiveCourses(req, res) {
     try {
-        const pool = await getPool(req);
+        const request = await pool.request();
 
         const query = `SELECT course_id, course_name FROM mmt_courses WHERE status = 1;`;
-        const result = await pool.query(query);
+        const result = await request.query(query);
 
         if (result.recordset.length > 0) {
 

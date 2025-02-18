@@ -19,7 +19,7 @@ let poolPromise;
 
 const connectToDB = async () => {
     try {
-        const pool=await sql.connect(config);
+        const pool = await sql.connect(config);
         console.log("Connected to SQL Server...");
         poolPromise = Promise.resolve(pool);
     } catch (err) {
@@ -28,11 +28,24 @@ const connectToDB = async () => {
     }
 };
 
-const getPool=async()=>{
-    if(!poolPromise){
+const getPool = async () => {
+    if (!poolPromise) {
+
         await connectToDB();
+    } else {
+        try {
+            const pool = await poolPromise;
+            if (!pool.connected) {
+                console.log("Reconnecting to SQL Server...");
+                await connectToDB();
+            }
+        } catch (err) {
+            console.error("Error while checking connection status:", err);
+            await connectToDB();
+        }
     }
     return poolPromise;
 };
+
 
 module.exports = { sql, connectToDB, getPool };

@@ -35,14 +35,12 @@ function verifyToken(token) {
     try {
 
         if (!token || typeof token !== 'string') {
-            console.error("Invalid token format:", token);
             return null;
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         return decoded;
     } catch (err) {
-        console.error("Error verifying token:", err);
         return null;
     }
 }
