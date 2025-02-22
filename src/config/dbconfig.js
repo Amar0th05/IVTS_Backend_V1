@@ -12,7 +12,7 @@ const config = {
         trustServerCertificate: true,
         enableArithAbort: true,
     },
-    port: 1433,
+    port:parseInt(process.env.DB_PORT),
 };
 
 let poolPromise;

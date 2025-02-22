@@ -41,7 +41,7 @@ async function getAllContractDetails(req, res) {
 
     } catch (err) {
         console.error('Error fetching contract details:', err);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -82,7 +82,7 @@ async function getContractById(req, res) {
 
     } catch (err) {
         console.error('Error fetching contract details:', err);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -120,7 +120,7 @@ async function getContractLogById(req, res) {
         }
     } catch (err) {
         console.error('Error fetching contract logs:', err);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -129,12 +129,14 @@ async function addContractLog(req, res) {
         const request = pool.request();
         const { data } = req.body;
 
+        console.log(data);
+
         if (!data) return res.status(400).json({ message: 'No inputs found' });
 
         let columns = [];
         let values = [];
 
-        console.log(data);
+        // console.log(data);
 
         if (data.staffID !== undefined) {
             columns.push("emp_id");
@@ -190,7 +192,7 @@ async function addContractLog(req, res) {
         res.json({ message: "Contract log details inserted successfully" });
     } catch (err) {
         console.error("Error inserting contract log details:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -237,10 +239,12 @@ async function updateContractLogs(req, res) {
             updates.push("gross_pay = @grossPay");
             request.input('grossPay', sql.Decimal(10, 2), data.grossPay);
         }
-        if (data.currentDesignation !== undefined) {
+        if (data.designation !== undefined) {
             updates.push("current_designation = @currentDesignation");
-            request.input('currentDesignation', sql.Int, data.currentDesignation);
+            request.input('currentDesignation', sql.Int, data.designation);
         }
+
+
 
         if (updates.length === 0) {
             return res.status(400).json({ message: 'No fields provided for update' });
@@ -258,7 +262,7 @@ async function updateContractLogs(req, res) {
         res.json({ message: "Contract log updated successfully" });
     } catch (err) {
         console.error("Error updating contract logs:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 

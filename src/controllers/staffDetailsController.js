@@ -17,16 +17,31 @@ async function getAllStaffDetails(req, res){
         const request= pool.request();
 
         const query=`
-                                SELECT 
-                s.staff_id AS staffID,
-                s.staff_name AS staffName,
-                o.organisation_name AS locationOfWork,
-                s.date_of_joining AS dateOfJoining,
-                s.[status] AS [status]
-            FROM tbl_staff s
-            LEFT JOIN mmt_organisation o 
-                ON s.location_of_work = o.org_id;
-    `;
+            SELECT
+                s.staff_id               AS staffID,
+                s.staff_name             AS staffName,
+                o.organisation_name      AS locationOfWork,
+                s.date_of_joining        AS dateOfJoining,
+                s.[status]               AS [status],
+                cl.gross_pay             AS currentSalary,
+                d.designation            AS currentDesignation
+                FROM tbl_staff s
+                LEFT JOIN mmt_organisation o
+                ON s.location_of_work = o.org_id
+                LEFT JOIN mmt_highest_qualification hq
+                ON s.highest_qualification = hq.qual_id
+                LEFT JOIN mmt_courses c
+                ON s.courses = c.course_id
+                OUTER APPLY (
+                    SELECT TOP 1 cl1.*
+                    FROM tbl_contract_logs cl1
+                    WHERE cl1.emp_id = s.staff_id
+                    ORDER BY cl1.contract_start_date DESC
+                ) cl
+                LEFT JOIN mmt_designation d
+                ON cl.current_designation = d.des_id;
+
+        `;
 
         const result =await request.query(query);
 
@@ -38,7 +53,7 @@ async function getAllStaffDetails(req, res){
 
     }catch(err){
         console.error('error fetching staff details : ',err);
-        res.status(500).json({message:err.message});
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -94,7 +109,7 @@ async function getStaffById(req, res){
 
     }catch(err){
         console.error('error fetching staff details : ',err);
-        res.status(500).json({message:err.message});
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -142,7 +157,7 @@ async function getStaffByIdWithoutJoin(req, res){
 
     }catch(err){
         console.error('error fetching staff details : ',err);
-        res.status(500).json({message:err.message});
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -251,7 +266,7 @@ async function addStaffDetails(req, res) {
         res.json({ message: "Staff details inserted successfully" });
     } catch (err) {
         console.error("Error inserting staff details:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -350,7 +365,7 @@ async function updateStaffDetails(req, res) {
         return res.json({ message: "Staff details updated successfully" });
     } catch (err) {
         console.error("Error updating staff details:", err);
-        return res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -377,7 +392,7 @@ async function toggleStaffStatus(req, res) {
         }
     } catch (err) {
         console.error("Error toggling staff status:", err);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -395,7 +410,7 @@ async function getActiveStaff(req, res) {
         }
     } catch (error) {
         console.error("Error fetching active staff:", error);
-        return res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 

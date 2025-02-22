@@ -41,9 +41,9 @@ async function sendResetPasswordMail(req, res) {
 
         await sendResetMail(mail, token);
         return res.status(200).json({ message: "Password reset mail sent" });
-    } catch (error) {
-        console.error("Error in sendResetPasswordMail: ", error);
-        return res.status(500).json({ message: "Internal server error" });
+    } catch (err) {
+        console.error("Error in sendResetPasswordMail: ", err);
+        return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -89,9 +89,9 @@ async function resetPassword(req, res) {
         await request.query("UPDATE tbl_user SET password = @password, resetToken = NULL, tokenExpiration = NULL WHERE mail = @mail");
 
         return res.status(200).json({ message: "Password reset successfully" });
-    } catch (error) {
-        console.error("Error in resetPassword: ", error);
-        return res.status(500).json({ message: "Internal server error" });
+    } catch (err) {
+        console.error("Error in resetPassword: ", err);
+        return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 

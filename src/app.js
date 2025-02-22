@@ -16,9 +16,11 @@ const {getActiveStaff}=require('./controllers/staffDetailsController')
 const {contractLogRouter}=require('./routes/contractLogRouter')
 const{getAllActiveDesignations}=require('./controllers/DesignationController')
 
+const {userRolesRouter}=require('./routes/RoleRoutes');
 const{getAllRoles}=require('./controllers/rolesController');
 const {authMiddleware}=require('./middlewares/authMiddleware');
 const {userRouter} = require("./routes/userRoutes");
+const {designationRouter} = require("./routes/DesignationRoutes");
 
 app.use(express.json());
 
@@ -29,7 +31,7 @@ app.use(cors({
 
 app.use(logger);
 
-
+connectToDB();
 
 app.use(async (req, res, next) => {
     if (!req.path.startsWith('/auth') && !req.path.startsWith('/password')) {
@@ -54,11 +56,14 @@ app.use('/courses',courseRouter);
 app.use('/organisations',organizationRouter);
 app.use('/hq',highestQualificationRouter);
 app.use('/user',userRouter);
+app.use('/roles',userRolesRouter);
 
+
+app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);
 app.get('/activestaffs/all',getActiveStaff);
 app.get('/designations/active',getAllActiveDesignations);
-app.get('/roles/all',getAllRoles);
+// app.get('/roles/all',getAllRoles);
 
 
 module.exports = app;

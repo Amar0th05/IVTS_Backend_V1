@@ -17,6 +17,7 @@ let pool;
 async function registerUser(req, res) {
     try {
         const data = req.body.userData;
+        // console.log(data);
         const request = pool.request();
 
 
@@ -26,8 +27,11 @@ async function registerUser(req, res) {
 
 
 
+        if(!data.role){
+            data.role=3;
+        }
 
-        const requiredFields = ['name', 'mail', 'password', 'role'];
+        const requiredFields = ['name', 'mail', 'password'];
         for (const field of requiredFields) {
             if (!data[field] || data[field].trim() === "") {
                 return res.status(400).json({ message: `${field} is required` });
@@ -86,7 +90,7 @@ async function registerUser(req, res) {
         }
 
 
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -109,11 +113,11 @@ async function getUserByEmail(req, res) {
 
     } catch (err) {
         console.error("Error fetching user:", err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
-//get user method by mail
+//get user by mail method
 
 async function getUser(mail){
 
@@ -130,9 +134,7 @@ async function getUser(mail){
             return null;
         }
 
-        const recordSet = result.recordset[0];
-
-        return new User(recordSet.id, recordSet.name, recordSet.mail, recordSet.password, recordSet.status, recordSet.role);
+        return result.recordset[0];
     }catch(error){
         console.error("Error fetching user:", error);
         return null;
@@ -156,9 +158,9 @@ async function getAllUsers(req,res){
         const result=await request.query(query);
         res.json({users: result.recordset});
 
-    }catch(error){
-        console.error("Error fetching users:", error);
-        return res.status(500).json({message:"Internal Server Error"});
+    }catch(err){
+        console.error("Error fetching users:", err);
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -185,8 +187,8 @@ async function toggleUserStatus(req,res){
             return res.status(404).json({message:"User not found"});
         }
         return res.json({message:"Status toggled successfully"});
-    }catch(errro){
-        return res.status(500).json({message:"Internal Server Error"});
+    }catch(err){
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -216,8 +218,8 @@ async function findUserById(req,res){
         return res.json({user:result.recordset[0]});
 
 
-    }catch(error){
-        return res.status(500).json({error:error.message});
+    }catch(err){
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -282,7 +284,7 @@ async function updateUser(req,res){
 
     }catch (err){
         console.error(err);
-        return res.status(500).json({message:"Internal Server Error"});
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 
 }

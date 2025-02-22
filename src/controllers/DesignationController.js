@@ -14,26 +14,26 @@ let pool;
     }
 )();
 
-async function getAllDesignations(req, res) {
-    const { status } = req.query;
-    let isActive;
-    try {
-        let query = "SELECT * FROM mmt_designation";
-
-        const request = pool.request();
-        if (status) {
-            isActive = status === 'active' ? 1 : 0;
-            query += " WHERE status = @status";
-            request.input('status', sql.Int, isActive);
+async function getAllDesignations(req,res){
+    try{
+        const request=await pool.request();
+        const result=await request.query(`SELECT * FROM mmt_designation`);
+        if(result.recordset.length===0){
+            return res.status(404).json({message:"No designations found"});
         }
-
-
-        const result = await request.query(query);
-        const data = result.recordset.map(row => new Designation(row.des_id, row.designation, row.created_on, row.status));
-        res.json(data);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Internal Server Error" });
+        let designations=[];
+        result.recordset.map(data=>{
+            designations.push({
+                designationID:data.des_id,
+                designation:data.designation,
+                status:data.status,
+                createdOn:data.created_on,
+            })
+        });
+        return res.status(200).json({designations});
+    }catch(err){
+        console.error("Error fetching designations:",err);
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -67,25 +67,10 @@ async function getDesignationById(req, res) {
         }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
-
-// async function toggleStatus(req, res) {
-//     try {
-//         const { id } = req.params;
-//         const result = await sql.query(`UPDATE mmt_designation SET status=CASE WHEN status=1 THEN 0 ELSE 1 END WHERE des_id=@des_id`, { des_id: id });
-//         if (result.rowsAffected > 0) {
-//             res.json({ message: "Status toggled successfully" });
-//         } else {
-//             res.status(404).json({ message: "Designation not found" });
-//         }
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: "Internal Server Error" });
-//     }
-// }
 
 async function toggleStatus(req,res){
     try{
@@ -104,7 +89,7 @@ async function toggleStatus(req,res){
                 res.status(404).json({message:'designation not found'});
             }
     }catch(err){
-        res.status(500).json({message:"internal server error"});
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
 
@@ -126,7 +111,7 @@ async function updateDesignation(req, res) {
         }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -158,7 +143,7 @@ async function createDesignation(req, res) {
         }
     } catch (err) {
         console.error("Error in createDesignation:", err);
-        res.status(500).json({ message: "Something went wrong, please try again later." });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -171,10 +156,11 @@ async function getAllActiveDesignations(req, res) {
         if(result.recordset.length > 0) {
             return res.json({designations: result.recordset});
         }
-        res.json(data);
+
+        return res.status(404).json({ message: "Designation not found" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
 
@@ -184,5 +170,6 @@ module.exports = {
     getDesignationById,
     toggleStatus,
     createDesignation,
-    getAllActiveDesignations
+    getAllActiveDesignations,
+    updateDesignation
 };
