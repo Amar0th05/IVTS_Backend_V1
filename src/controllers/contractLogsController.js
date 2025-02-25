@@ -205,7 +205,7 @@ async function updateContractLogs(req, res) {
         console.log(data);
 
         if (!data) return res.status(400).json({ message: 'No inputs found' });
-        if (!data.staffID) return res.status(400).json({ message: 'staff id ID is required' });
+        if (!data.staffID) return res.status(400).json({ message: 'contract id is required' });
 
         let updates = [];
 
@@ -214,6 +214,7 @@ async function updateContractLogs(req, res) {
             updates.push("emp_id = @empID");
             request.input('empID', sql.NVarChar(20), data.staffID);
 
+            request.input('contractID',sql.Int,data.contractID);
 
         if (data.contractStartDate !== undefined) {
             updates.push("contract_start_date = @contractStartDate");
@@ -251,7 +252,7 @@ async function updateContractLogs(req, res) {
         }
 
 
-        const query = `UPDATE tbl_contract_logs SET ${updates.join(", ")} WHERE emp_id = @empID`;
+        const query = `UPDATE tbl_contract_logs SET ${updates.join(", ")} WHERE contract_id = @contractID`;
         const result = await request.query(query);
 
 
