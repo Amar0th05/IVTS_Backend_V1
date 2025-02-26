@@ -21,6 +21,7 @@ const{getAllRoles}=require('./controllers/rolesController');
 const {authMiddleware}=require('./middlewares/authMiddleware');
 const {userRouter} = require("./routes/userRoutes");
 const {designationRouter} = require("./routes/DesignationRoutes");
+const {DashBoardRouter} = require("./routes/DashBoardRoutes");
 
 app.use(express.json());
 
@@ -57,7 +58,7 @@ app.use('/organisations',organizationRouter);
 app.use('/hq',highestQualificationRouter);
 app.use('/user',userRouter);
 app.use('/roles',userRolesRouter);
-
+app.use('/dashboard',DashBoardRouter);
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);
