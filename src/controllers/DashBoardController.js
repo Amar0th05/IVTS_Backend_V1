@@ -33,7 +33,7 @@ async function getStaffCountByHighestQualification(req, res){
         if(result.recordset.length > 0){
             return res.status(200).json({result:result.recordset});
         }
-
+        return res.status(404).json({result:[]});
     }catch(err){
         console.error(err);
         res.status(500).json({ message: err.message || "Internal Server Error" });
@@ -69,7 +69,7 @@ async function getDesignationCountsInOrganizations(req, res) {
         const request = await pool.request();
 
         const query = `
-      ;WITH LatestContractLogs AS (
+      WITH LatestContractLogs AS (
           SELECT 
             c.emp_id,
             c.current_designation,
@@ -112,25 +112,28 @@ async function getDesignationCountsInOrganizations(req, res) {
             }
         });
 
-
+        let chartData = [];
         const allDesignations = Array.from(designationSet);
+        if(allDesignations.length > 0){
+            chartData = Object.keys(grouped).map(orgKey => {
+                const entry = { entity: orgKey };
 
+                allDesignations.forEach(designation => {
 
-        const chartData = Object.keys(grouped).map(orgKey => {
-            const entry = { entity: orgKey };
-
-            allDesignations.forEach(designation => {
-
-                // const key = designation;
+                    // const key = designation;
                     // .split(" ")
                     // .map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1))
                     // .join("");
-                entry[designation] = grouped[orgKey][designation];
+                    entry[designation] = grouped[orgKey][designation];
+                });
+                return entry;
             });
-            return entry;
-        });
+            return res.status(200).json({ result: chartData });
+        }
 
-        return res.status(200).json({ result: chartData });
+
+        return res.status(404).json({result:[]});
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ message: err.message || "Internal Server Error" });
@@ -142,7 +145,7 @@ async function getSalaryHikes(req,res){
     try{
         const request=await pool.request();
         const query=`
-                ;WITH LatestContractLogs AS (
+                WITH LatestContractLogs AS (
           SELECT 
             c.emp_id,
             c.contract_start_date,
@@ -179,7 +182,7 @@ async function getHighestAndLowestHikes(req,res){
     try{
         const request=await pool.request();
         const query=`
-                            ;WITH LatestContractLogs AS (
+                            WITH LatestContractLogs AS (
     SELECT 
         c.emp_id,
         c.contract_start_date,
