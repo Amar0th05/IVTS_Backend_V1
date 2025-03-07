@@ -22,6 +22,11 @@ const {authMiddleware}=require('./middlewares/authMiddleware');
 const {userRouter} = require("./routes/userRoutes");
 const {designationRouter} = require("./routes/DesignationRoutes");
 const {DashBoardRouter} = require("./routes/DashBoardRoutes");
+const{equipmentListRouter}=require('./routes/equipmentListRoutes');
+const {procurementRouter} = require("./routes/ProcurementRoutes");
+const {stageRouter} = require("./routes/StagesRoutes");
+const {equipmentDeliveryRouter} = require("./routes/EquipmentDeliveryRoutes");
+const equipmentCategoryRoutes = require("./routes/EquipmentCategoryRoutes");
 
 app.use(express.json());
 
@@ -59,6 +64,13 @@ app.use('/hq',highestQualificationRouter);
 app.use('/user',userRouter);
 app.use('/roles',userRolesRouter);
 app.use('/dashboard',DashBoardRouter);
+app.use('/el',equipmentListRouter);
+app.use('/procurements',procurementRouter);
+app.use('/stages',stageRouter);
+app.use('/equipmentsDelivery',equipmentDeliveryRouter);
+
+
+app.use("/equipmentCategories",equipmentCategoryRoutes);
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);

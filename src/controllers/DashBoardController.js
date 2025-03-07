@@ -288,6 +288,46 @@ async function getManningCost(req,res){
 }
 
 
+async function getStaffsCountByDesignation(req, res) {
+    try {
+        const request = await pool.request();
+
+        const query = `
+            WITH LatestContractLogs AS (
+                SELECT
+                    c.emp_id,
+                    c.current_designation,
+                    c.contract_start_date,
+                    ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
+                FROM tbl_contract_logs c
+            )
+            SELECT
+                d.designation,
+                ISNULL(COUNT(s.staff_id), 0) AS [count]
+            FROM mmt_organisation o
+                     LEFT JOIN tbl_staff s ON s.location_of_work = o.org_id
+                     LEFT JOIN LatestContractLogs lcl ON s.staff_id = lcl.emp_id AND lcl.rn = 1
+                     LEFT JOIN mmt_designation d ON lcl.current_designation = d.des_id
+            GROUP BY d.designation;
+        `;
+
+        const response = await request.query(query);
+        if (response.recordset.length > 0) {
+            const filteredData = response.recordset.filter(item => item.designation);
+
+            // console.log(filteredData);
+            return res.status(200).json({ result: filteredData });
+        }
+    
+        return res.status(404).json({ result: "Not Found" });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+}
+
+
 module.exports = {
     getStaffCountByHighestQualification,
     getStaffsCountByCourses,
@@ -296,4 +336,5 @@ module.exports = {
     getHighestAndLowestHikes,
     getTotalManpowerDeployed,
     getManningCost,
+    getStaffsCountByDesignation
 }
