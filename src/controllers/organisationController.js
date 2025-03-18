@@ -179,6 +179,25 @@ async function updateOrganisation(req, res) {
     }
 }
 
+async function getAllOrganisationsExceptHQ(req,res){
+    try {
+        const request = await pool.request();
+
+        const query = `SELECT org_id,organisation_name FROM mmt_organisation WHERE status=1 AND org_id!=1;`;
+        const result = await request.query(query);
+
+        if (result.recordset.length > 0) {
+
+            return res.status(200).json({ organisations: result.recordset });
+        } else {
+            return res.status(404).json({ error: "No organisations found" });
+        }
+    } catch (err) {
+        console.error("Error fetching organisations:", err);
+        return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
+    }
+}
+
 module.exports = {
     getActiveOrganisations,
     getAllOrganisations,
@@ -186,4 +205,5 @@ module.exports = {
     getOrganisationById,
     createOrganisation,
     updateOrganisation,
+    getAllOrganisationsExceptHQ
 }

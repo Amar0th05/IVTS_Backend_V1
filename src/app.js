@@ -27,6 +27,13 @@ const {procurementRouter} = require("./routes/ProcurementRoutes");
 const {stageRouter} = require("./routes/StagesRoutes");
 const {equipmentDeliveryRouter} = require("./routes/EquipmentDeliveryRoutes");
 const equipmentCategoryRoutes = require("./routes/EquipmentCategoryRoutes");
+const equipmentListRoutes = require("./routes/EquipmentListRoutes");
+const equipmentRouter=require("./routes/EquipmentRouter");
+const {employeeInsuranceRouter} = require("./routes/insuranceRouter");
+const {OAndMRouter} = require("./routes/o&mInvoiceRoutes");
+
+const {equipmentInvoiceRouter} = require("./routes/equipmentInvoiceRoutes");
+
 
 app.use(express.json());
 
@@ -68,9 +75,13 @@ app.use('/el',equipmentListRouter);
 app.use('/procurements',procurementRouter);
 app.use('/stages',stageRouter);
 app.use('/equipmentsDelivery',equipmentDeliveryRouter);
-
+app.use('/insurance',employeeInsuranceRouter);
 
 app.use("/equipmentCategories",equipmentCategoryRoutes);
+
+app.use('/equipmentInvoice',equipmentInvoiceRouter);
+app.use("/equipments",equipmentRouter);
+app.use("/om",OAndMRouter);
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);

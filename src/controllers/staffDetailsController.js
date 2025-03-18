@@ -57,6 +57,60 @@ async function getAllStaffDetails(req, res){
     }
 }
 
+async function downloadAllStaffDetails(req, res){
+    try{
+        const request= pool.request();
+
+        const query=`
+            SELECT
+                s.staff_id               AS staffID,
+                s.staff_name             AS staffName,
+                o.organisation_name      AS locationOfWork,
+                s.date_of_joining        AS dateOfJoining,
+                s.salary_at_joining AS salaryAtJoining,
+                s.date_of_birth AS dateOfBirth,
+                s.aadhaar_number AS aadharNumber,
+                s.permanent_address AS permanentAddress,
+                s.contact_number AS contactNumber,
+                s.email_id AS email,
+                hq.highest_qualification as highestQualification,
+                s.qualification as qualification,
+                s.certifications,
+                c.course_name as course,
+                cl.gross_pay             AS currentSalary,
+                d.designation            AS currentDesignation,
+                s.[status]               AS [status]
+            FROM tbl_staff s
+                LEFT JOIN mmt_organisation o
+            ON s.location_of_work = o.org_id
+                LEFT JOIN mmt_highest_qualification hq
+                ON s.highest_qualification = hq.qual_id
+                LEFT JOIN mmt_courses c
+                ON s.courses = c.course_id
+                OUTER APPLY (
+                SELECT TOP 1 cl1.*
+                FROM tbl_contract_logs cl1
+                WHERE cl1.emp_id = s.staff_id
+                ORDER BY cl1.contract_start_date DESC
+                ) cl
+                LEFT JOIN mmt_designation d
+                ON cl.current_designation = d.des_id;
+        `;
+
+        const result =await request.query(query);
+
+
+        if(result.recordset.length>0){
+            return res.json({staffDetails:result.recordset});
+        }else{
+            return res.status(404).json({message:'no records found'});
+        }
+
+    }catch(err){
+        console.error('error fetching staff details : ',err);
+        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
+    }
+}
 
 async function getStaffById(req, res){
 
@@ -65,7 +119,7 @@ async function getStaffById(req, res){
     if(!id){
         return res.status(404).json({message:'no id found'});
     }
-    console.log(id);
+    // console.log(id);
 
     try{
         const request= await pool.request();
@@ -113,21 +167,20 @@ async function getStaffById(req, res){
     }
 }
 
-async function getStaffByIdWithoutJoin(req, res){
+async function getStaffByIdWithoutJoin(req, res) {
+    const id = req.params.id;
 
-    const id= req.params.id;
-
-    if(!id){
-        return res.status(404).json({message:'no id found'});
+    if (!id) {
+        return res.status(404).json({ message: 'no id found' });
     }
-    console.log(id);
+    // console.log(id);
 
-    try{
-        const request= await pool.request();
+    try {
+        const request = await pool.request();
+        await request.input('id', sql.NVarChar(20), id);
 
-        await request.input('id',sql.NVarChar(20),id);
-
-        const query=`
+        // Query for staff details
+        const query = `
             SELECT staff_id              AS staffID,
                    staff_name            AS staffName,
                    date_of_birth         AS dateOfBirth,
@@ -141,46 +194,63 @@ async function getStaffByIdWithoutJoin(req, res){
                    location_of_work      AS locationOfWork,
                    date_of_joining       AS dateOfJoining,
                    certifications        AS certifications,
-                   courses               AS courses, [status] AS [status]
+                   courses               AS courses,
+                [status]              AS [status]
             FROM tbl_staff
             WHERE staff_id=@id;
         `;
 
         const result = await request.query(query);
-        if(result.recordset.length>0){
-            return res.json({staffDetail:result.recordset[0]});
-        }else{
-            return res.status(404).json({message:'no records found'});
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ message: 'no records found' });
         }
 
+        // Query for insurance details
+        const insuranceQuery = `
+            SELECT id                     AS insuranceID,
+                   emp_id                 AS empID,
+                   insurance_provider     AS insuranceProvider,
+                   policy_number          AS policyNumber,
+                   policy_start_date      AS policyStartDate,
+                   policy_expiry_date     AS policyExpiryDate,
+                   insurance_updated      AS insuranceUpdated,
+                   updated_by             AS updatedBy
+            FROM tbl_employee_insurance
+            WHERE emp_id=@id;
+        `;
 
+        const insuranceResult = await request.query(insuranceQuery);
+        // console.log('insurance details : ',insuranceResult.recordset.length > 0 ? insuranceResult.recordset : null);
+        return res.json({
+            staffDetail: result.recordset[0],
 
-    }catch(err){
-        console.error('error fetching staff details : ',err);
-        res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
+            insuranceDetail: insuranceResult.recordset.length > 0 ? insuranceResult.recordset : null
+        });
+
+    } catch (err) {
+        console.error('error fetching staff details : ', err);
+        res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
+
+
 
 
 async function addStaffDetails(req, res) {
     try {
         const request = pool.request();
+        const { data } = req.body;
+        const {insuranceData}=req.body;
 
-        const {data} = req.body;
 
         if (!data) return res.status(404).json({ message: 'No inputs found' });
-        console.log(data);
-        if (data.staffID===null) return res.status(404).json({ message: 'No ID found' });
-        if (data.locationOfWork===null) return res.status(404).json({ message: 'Location of Work not found' });
+        if (data.staffID === null) return res.status(404).json({ message: 'No ID found' });
+        if (data.locationOfWork === null) return res.status(404).json({ message: 'Location of Work not found' });
 
-        let columns = [];
-        let values = [];
-        columns.push('staff_id');
-        values.push('@id');
+        let columns = ['staff_id', 'location_of_work'];
+        let values = ['@id', '@locationOfWork'];
         request.input('id', sql.NVarChar(20), data.staffID);
-
-        columns.push("location_of_work");
-        values.push("@locationOfWork");
         request.input('locationOfWork', sql.Int, data.locationOfWork);
 
         if (data.staffName !== undefined) {
@@ -259,16 +329,38 @@ async function addStaffDetails(req, res) {
         values.push("@status");
         request.input('status', sql.Bit, 1);
 
-        const query = `INSERT INTO tbl_staff (${columns.join(", ")}) VALUES (${values.join(", ")})`;
+        const staffQuery = `INSERT INTO tbl_staff (${columns.join(", ")}) VALUES (${values.join(", ")})`;
+        await request.query(staffQuery);
 
-        await request.query(query);
 
-        res.json({ message: "Staff details inserted successfully" });
+        if (insuranceData) {
+            const insuranceRequest = pool.request();
+            const { insuranceProvider, policyNumber, policyStartDate, policyExpiryDate,updatedBy } = insuranceData;
+
+            if(insuranceProvider && policyNumber && policyStartDate && updatedBy && policyExpiryDate) {
+                insuranceRequest.input('emp_id', sql.NVarChar(20), data.staffID);
+                insuranceRequest.input('insurance_provider', sql.NVarChar(255), insuranceProvider||null);
+                insuranceRequest.input('policy_number', sql.NVarChar(100), policyNumber||null);
+                insuranceRequest.input('policy_start_date', sql.Date, policyStartDate||null);
+                insuranceRequest.input('policy_expiry_date', sql.Date, policyExpiryDate||null);
+                insuranceRequest.input('insurance_updated', sql.Bit, 0);
+                insuranceRequest.input('updated_by',sql.NVarChar,updatedBy||null);
+
+                const insuranceQuery = `INSERT INTO tbl_employee_insurance (emp_id, insurance_provider, policy_number, policy_start_date, policy_expiry_date, insurance_updated) 
+                                    VALUES (@emp_id, @insurance_provider, @policy_number, @policy_start_date, @policy_expiry_date, @insurance_updated)`;
+
+                await insuranceRequest.query(insuranceQuery);
+            }
+
+        }
+
+        res.json({ message: "Staff details and insurance inserted successfully" });
     } catch (err) {
-        console.error("Error inserting staff details:", err);
+        console.error("Error inserting staff or insurance details:", err);
         res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error" });
     }
 }
+
 
 async function updateStaffDetails(req, res) {
     try {
@@ -376,7 +468,7 @@ async function toggleStaffStatus(req, res) {
         const {id}= req.params;
         const request = await pool.request();
 
-        console.log(id);
+        // console.log(id);
         request.input("staff_id", sql.NVarChar(20), id);
 
         const result = await request.query(`
@@ -422,5 +514,6 @@ module.exports={
     toggleStaffStatus,
     getUserByIdWithoutJoin: getStaffByIdWithoutJoin,
     updateStaffDetails,
-    getActiveStaff
+    getActiveStaff,
+    downloadAllStaffDetails
 }

@@ -21,12 +21,21 @@ async function getStaffCountByHighestQualification(req, res){
         const request=await pool.request();
 
         const query= `
-                                SELECT count(s.staff_id) AS [count],q.highest_qualification AS qualification
-                                FROM tbl_staff s
-                                RIGHT JOIN mmt_highest_qualification q on
-                                s.highest_qualification=q.qual_id
-                                GROUP BY(q.highest_qualification);
-        
+            SELECT
+                q.highest_qualification AS qualification,
+                COUNT(s.staff_id) AS [count]
+            FROM mmt_highest_qualification q
+                     LEFT JOIN tbl_staff s
+                               ON s.highest_qualification = q.qual_id
+                                   AND s.status = 1
+                                   AND NOT EXISTS (
+                                       SELECT 1
+                                       FROM tbl_contract_logs c
+                                       WHERE c.emp_id = s.staff_id
+                                         AND c.current_designation IN (3, 4)
+                                   )
+            GROUP BY q.highest_qualification;
+    
         `;
 
         const result = await request.query(query);
@@ -40,18 +49,55 @@ async function getStaffCountByHighestQualification(req, res){
     }
 }
 
+async function getOperatorsCountByHighestQualification(req, res){
+    try{
 
+        const request=await pool.request();
+
+        const query= `
+            SELECT
+                q.highest_qualification AS qualification,
+                COUNT(s.staff_id) AS [count]
+            FROM mmt_highest_qualification q
+                     LEFT JOIN tbl_staff s
+                               ON s.highest_qualification = q.qual_id
+                                   AND s.status = 1
+                                   AND EXISTS (
+                                       SELECT 1
+                                       FROM tbl_contract_logs c
+                                       WHERE c.emp_id = s.staff_id
+                                         AND c.current_designation IN (3, 4)
+                                   )
+            GROUP BY q.highest_qualification;
+        `;
+
+        const result = await request.query(query);
+        if(result.recordset.length > 0){
+            return res.status(200).json({result:result.recordset});
+        }
+        return res.status(404).json({result:[]});
+    }catch(err){
+        console.error(err);
+        res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+}
 
 async function getStaffsCountByCourses(req,res){
     try{
         const request=await pool.request();
         const query=`
-                                SELECT COUNT(s.staff_id) AS [count],c.course_name AS course
-                                FROM tbl_staff s
-                                RIGHT JOIN mmt_courses c ON
-                                s.courses=c.course_id
-                                GROUP BY(c.course_name);
-        
+            SELECT
+                c.course_name AS course,
+                COALESCE(SUM(CASE WHEN cl.current_designation NOT IN (3, 4) THEN 1 ELSE 0 END), 0) AS [count]
+            FROM mmt_courses c
+                     LEFT JOIN tbl_staff s
+                               ON s.courses = c.course_id
+                                   AND s.status = 1
+                     LEFT JOIN tbl_contract_logs cl
+                               ON s.staff_id = cl.emp_id
+            GROUP BY c.course_name;
+
+
         `;
         const result = await request.query(query);
         if(result.recordset.length > 0){
@@ -64,29 +110,61 @@ async function getStaffsCountByCourses(req,res){
     }
 }
 
+
+async function getOperatorsCountByCourses(req,res){
+    try{
+        const request=await pool.request();
+        const query=`
+            SELECT
+                c.course_name AS course,
+                COALESCE(SUM(CASE WHEN cl.current_designation IN (3, 4) THEN 1 ELSE 0 END), 0) AS [count]
+            FROM mmt_courses c
+                     LEFT JOIN tbl_staff s
+                               ON s.courses = c.course_id
+                                   AND s.status = 1 
+                     LEFT JOIN tbl_contract_logs cl
+                               ON s.staff_id = cl.emp_id
+            GROUP BY c.course_name;
+
+        `;
+        const result = await request.query(query);
+        if(result.recordset.length > 0){
+            return res.status(200).json({result:result.recordset});
+        }
+        return res.status(404).json({result:"Not Found"});
+    }catch(err){
+        console.error(err);
+        res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+}
 async function getDesignationCountsInOrganizations(req, res) {
     try {
         const request = await pool.request();
 
         const query = `
-      WITH LatestContractLogs AS (
-          SELECT 
-            c.emp_id,
-            c.current_designation,
-            c.contract_start_date,
-            ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
-          FROM tbl_contract_logs c
-      )
-      SELECT 
-        o.organisation_name AS organisation,
-        d.designation,
-        COUNT(s.staff_id) AS [count]
-      FROM mmt_organisation o
-      LEFT JOIN tbl_staff s ON s.location_of_work = o.org_id
-      LEFT JOIN LatestContractLogs lcl ON s.staff_id = lcl.emp_id AND lcl.rn = 1
-      LEFT JOIN mmt_designation d ON lcl.current_designation = d.des_id
-      GROUP BY o.organisation_name, d.designation
-      ORDER BY o.organisation_name;
+            WITH LatestContractLogs AS (
+                SELECT
+                    c.emp_id,
+                    c.current_designation,
+                    c.contract_start_date,
+                    ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
+                FROM tbl_contract_logs c
+            )
+            SELECT
+                o.organisation_name AS organisation,
+                d.designation,
+                COUNT(s.staff_id) AS [count]
+            FROM mmt_organisation o
+                     LEFT JOIN tbl_staff s
+                               ON s.location_of_work = o.org_id
+                                   AND s.status = 1 
+                     LEFT JOIN LatestContractLogs lcl
+                               ON s.staff_id = lcl.emp_id
+                                   AND lcl.rn = 1
+                     LEFT JOIN mmt_designation d
+                               ON lcl.current_designation = d.des_id
+            GROUP BY o.organisation_name, d.designation
+            ORDER BY o.organisation_name;
     `;
 
         const result = await request.query(query);
@@ -145,20 +223,24 @@ async function getSalaryHikes(req,res){
     try{
         const request=await pool.request();
         const query=`
-                WITH LatestContractLogs AS (
-          SELECT 
-            c.emp_id,
-            c.contract_start_date,
-c.gross_pay,
-            ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
-          FROM tbl_contract_logs c
-)
-select
-  (abs(l.gross_pay-s.salary_at_joining)/s.salary_at_joining)*100 as [hike]
-from tbl_staff s
-left join LatestContractLogs l on
-l.emp_id=s.staff_id AND l.rn=1 order by hike desc;
-        
+            WITH LatestContractLogs AS (
+                SELECT
+                    c.emp_id,
+                    c.contract_start_date,
+                    c.gross_pay,
+                    ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
+                FROM tbl_contract_logs c
+            )
+            SELECT
+                l.gross_pay AS [hike]
+            FROM tbl_staff s
+                     LEFT JOIN LatestContractLogs l
+                               ON l.emp_id = s.staff_id
+                                   AND l.rn = 1
+            WHERE s.status = 1
+            ORDER BY l.gross_pay DESC;
+
+
         `;
         let hikes=[];
 
@@ -182,37 +264,40 @@ async function getHighestAndLowestHikes(req,res){
     try{
         const request=await pool.request();
         const query=`
-                            WITH LatestContractLogs AS (
-    SELECT 
-        c.emp_id,
-        c.contract_start_date,
-        c.gross_pay,
-        ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
-    FROM tbl_contract_logs c
-)
-SELECT staff_name, organisation, hike FROM (
-    SELECT TOP 1 
-        s.staff_name,
-        o.organisation_name AS organisation,
-        (ABS(l.gross_pay - s.salary_at_joining) / s.salary_at_joining) * 100 AS [hike]
-    FROM tbl_staff s
-    LEFT JOIN LatestContractLogs l ON l.emp_id = s.staff_id AND l.rn = 1
-    LEFT JOIN mmt_organisation o ON o.org_id = s.location_of_work
-    ORDER BY [hike] DESC 
-) AS HighestHike
+            WITH LatestContractLogs AS (
+                SELECT
+                    c.emp_id,
+                    c.contract_start_date,
+                    c.gross_pay,
+                    ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
+                FROM tbl_contract_logs c
+            )
+            SELECT staff_name, organisation, hike FROM (
+                                                           SELECT TOP 1
+                                                               s.staff_name,
+                                                               o.organisation_name AS organisation,
+                                                               (ABS(l.gross_pay - s.salary_at_joining) / s.salary_at_joining) * 100 AS [hike]
+                                                           FROM tbl_staff s
+                                                                    LEFT JOIN LatestContractLogs l ON l.emp_id = s.staff_id AND l.rn = 1
+                                                                    LEFT JOIN mmt_organisation o ON o.org_id = s.location_of_work
+                                                           WHERE s.status = 1  
+                                                           ORDER BY [hike] DESC
+                                                       ) AS HighestHike
 
-UNION ALL
+            UNION ALL
 
-SELECT staff_name, organisation, hike FROM (
-    SELECT TOP 1 
-        s.staff_name,
-        o.organisation_name AS organisation,
-        (ABS(l.gross_pay - s.salary_at_joining) / s.salary_at_joining) * 100 AS [hike]
-    FROM tbl_staff s
-    LEFT JOIN LatestContractLogs l ON l.emp_id = s.staff_id AND l.rn = 1
-    LEFT JOIN mmt_organisation o ON o.org_id = s.location_of_work
-    ORDER BY [hike] ASC 
-) AS LowestHike;
+            SELECT staff_name, organisation, hike FROM (
+                                                           SELECT TOP 1
+                                                               s.staff_name,
+                                                               o.organisation_name AS organisation,
+                                                               (ABS(l.gross_pay - s.salary_at_joining) / s.salary_at_joining) * 100 AS [hike]
+                                                           FROM tbl_staff s
+                                                                    LEFT JOIN LatestContractLogs l ON l.emp_id = s.staff_id AND l.rn = 1
+                                                                    LEFT JOIN mmt_organisation o ON o.org_id = s.location_of_work
+                                                           WHERE s.status = 1  
+                                                           ORDER BY [hike] ASC
+                                                       ) AS LowestHike;
+
 
 
         `;
@@ -231,7 +316,7 @@ async function getTotalManpowerDeployed(req,res){
     try{
         const request=await pool.request();
         const query=`
-                            select count(distinct staff_id) as count from tbl_staff;
+                            select count(distinct staff_id) as count from tbl_staff where status=1;
         `;
 
         const result=await request.query(query);
@@ -250,23 +335,29 @@ async function getManningCost(req,res){
     try{
         const request=await pool.request();
         const query=`
-                                     WITH LatestContractLogs AS (
-          SELECT 
-            c.emp_id,
-            c.current_designation,
-            c.contract_start_date,
-            c.gross_pay,
-            ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
-          FROM tbl_contract_logs c
-      )
-      SELECT 
-        o.organisation_name AS organisation,
-        sum(lcl.gross_pay) as manningCost
-      FROM mmt_organisation o
-      LEFT JOIN tbl_staff s ON s.location_of_work = o.org_id
-      LEFT JOIN LatestContractLogs lcl ON s.staff_id = lcl.emp_id AND lcl.rn = 1
-      GROUP BY o.organisation_name;
-        
+            WITH LatestContractLogs AS (
+                SELECT
+                    c.emp_id,
+                    c.current_designation,
+                    c.contract_start_date,
+                    c.gross_pay,
+                    ROW_NUMBER() OVER (PARTITION BY c.emp_id ORDER BY c.contract_start_date DESC) AS rn
+                FROM tbl_contract_logs c
+            )
+            SELECT
+                o.organisation_name AS organisation,
+                SUM(lcl.gross_pay) AS manningCost
+            FROM mmt_organisation o
+                     LEFT JOIN tbl_staff s
+                               ON s.location_of_work = o.org_id
+                                   AND s.status = 1  
+                     LEFT JOIN LatestContractLogs lcl
+                               ON s.staff_id = lcl.emp_id
+                                   AND lcl.rn = 1
+            GROUP BY o.organisation_name;
+
+
+
         `;
 
 
@@ -305,10 +396,16 @@ async function getStaffsCountByDesignation(req, res) {
                 d.designation,
                 ISNULL(COUNT(s.staff_id), 0) AS [count]
             FROM mmt_organisation o
-                     LEFT JOIN tbl_staff s ON s.location_of_work = o.org_id
-                     LEFT JOIN LatestContractLogs lcl ON s.staff_id = lcl.emp_id AND lcl.rn = 1
-                     LEFT JOIN mmt_designation d ON lcl.current_designation = d.des_id
+                     LEFT JOIN tbl_staff s
+                               ON s.location_of_work = o.org_id
+                                   AND s.status = 1 
+                     LEFT JOIN LatestContractLogs lcl
+                               ON s.staff_id = lcl.emp_id
+                                   AND lcl.rn = 1
+                     LEFT JOIN mmt_designation d
+                               ON lcl.current_designation = d.des_id
             GROUP BY d.designation;
+
         `;
 
         const response = await request.query(query);
@@ -336,5 +433,7 @@ module.exports = {
     getHighestAndLowestHikes,
     getTotalManpowerDeployed,
     getManningCost,
-    getStaffsCountByDesignation
+    getStaffsCountByDesignation,
+    getOperatorsCountByHighestQualification,
+    getOperatorsCountByCourses
 }
