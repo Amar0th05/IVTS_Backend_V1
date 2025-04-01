@@ -16,6 +16,8 @@ const {getActiveStaff}=require('./controllers/staffDetailsController')
 const {contractLogRouter}=require('./routes/contractLogRouter')
 const{getAllActiveDesignations}=require('./controllers/DesignationController')
 
+
+
 const {userRolesRouter}=require('./routes/RoleRoutes');
 const{getAllRoles}=require('./controllers/rolesController');
 const {authMiddleware}=require('./middlewares/authMiddleware');
@@ -27,13 +29,15 @@ const {procurementRouter} = require("./routes/ProcurementRoutes");
 const {stageRouter} = require("./routes/StagesRoutes");
 const {equipmentDeliveryRouter} = require("./routes/EquipmentDeliveryRoutes");
 const equipmentCategoryRoutes = require("./routes/EquipmentCategoryRoutes");
-const equipmentListRoutes = require("./routes/EquipmentListRoutes");
+// const equipmentListRoutes = require("./routes/EquipmentListRoutes");
 const equipmentRouter=require("./routes/EquipmentRouter");
 const {employeeInsuranceRouter} = require("./routes/insuranceRouter");
 const {OAndMRouter} = require("./routes/o&mInvoiceRoutes");
+const {ProjectTrackingRouter} = require("./routes/ProjectTrackingRoutes");
 
 const {equipmentInvoiceRouter} = require("./routes/equipmentInvoiceRoutes");
-
+const {ProjectClientRouter} = require("./routes/ProjectClientRouter");
+const {DeliverablesRouter} = require("./routes/ProjectDeliverablesRoutes");
 
 app.use(express.json());
 
@@ -82,12 +86,17 @@ app.use("/equipmentCategories",equipmentCategoryRoutes);
 app.use('/equipmentInvoice',equipmentInvoiceRouter);
 app.use("/equipments",equipmentRouter);
 app.use("/om",OAndMRouter);
+app.use("/projects",ProjectTrackingRouter);
+app.use("/clients",ProjectClientRouter);
+app.use("/deliverables",DeliverablesRouter);
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);
 app.get('/activestaffs/all',getActiveStaff);
 app.get('/designations/active',getAllActiveDesignations);
 // app.get('/roles/all',getAllRoles);
+
+
 
 
 module.exports = app;

@@ -4,7 +4,8 @@ const {
     getEquipmentDeliveryById,
     createEquipmentDelivery,
     updateEquipmentDelivery,
-    deleteEquipmentDelivery
+    deleteEquipmentDelivery,
+    getAllEquipmentsForPort
 } = require('../controllers/equipmentDeliveryController');
 
 const equipmentDeliveryRouter = express.Router();
@@ -14,5 +15,6 @@ equipmentDeliveryRouter.get('/:id', getEquipmentDeliveryById);
 equipmentDeliveryRouter.post('/', createEquipmentDelivery);
 equipmentDeliveryRouter.put('/:id', updateEquipmentDelivery);
 equipmentDeliveryRouter.delete('/:id', deleteEquipmentDelivery);
+equipmentDeliveryRouter.get('/port/:id', getAllEquipmentsForPort);
 
 module.exports = { equipmentDeliveryRouter };

@@ -98,7 +98,7 @@ async function getLogsExpiringInFifteenDays() {
         }
         return null;
     } catch (err) {
-        console.error("Error fetching contract logs:", err);
+        console.    error("Error fetching contract logs:", err);
         return null;
     }
 }

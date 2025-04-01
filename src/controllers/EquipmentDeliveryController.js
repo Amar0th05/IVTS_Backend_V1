@@ -150,10 +150,72 @@ async function deleteEquipmentDelivery(req, res) {
     }
 }
 
+
+// async function getEquipmentDeliveryStageSummary(req,res){
+//     try{
+//         const request=await pool.request();
+//         let query=`
+//
+//
+//         `;
+//     }catch(err){ 
+//         console.log(err);
+//         return res.status(500).send({ message: err.message });   
+//     }
+// }
+
+
+async function getAllEquipmentsForPort(req,res){
+    try{
+        const id=req.params.id;
+        const request=await pool.request();
+        request.input('id', id);
+        const query=`
+                                select e.equipment,
+                                e.total_quantity as totalQuantity,
+                                d.stage_id as stage,
+                                e.equipment_category as category
+                                from tbl_equipments e
+                                inner join tbl_equipment_delivery d on d.equipment_id=e.equipment_id and e.port=@id;
+        `;
+        const result = await request.query(query);
+        const data=result.recordset;
+        if(!data){
+            return res.json({equipments:[]});
+        }
+
+        let equipments = {};
+
+        data.forEach((e) => {
+
+            if (!equipments[e.category]) {
+                equipments[e.category] = {};
+            }
+
+
+            if (!equipments[e.category][e.stage]) {
+                equipments[e.category][e.stage] = [];
+            }
+
+
+            equipments[e.category][e.stage].push({
+                equipment: e.equipment,
+                totalQuantity: e.totalQuantity,
+            });
+        });
+        return res.json({equipments:equipments||[]});
+
+    }catch(err){
+        console.error(err);
+        return res.status(500).send({ message: err.message||'Internal Server Error' });
+    }
+}
+
 module.exports = {
     getAllEquipmentDeliveries,
     getEquipmentDeliveryById,
     createEquipmentDelivery,
     updateEquipmentDelivery,
     deleteEquipmentDelivery,
+    getAllEquipmentsForPort,
 };
