@@ -39,6 +39,17 @@ const {equipmentInvoiceRouter} = require("./routes/equipmentInvoiceRoutes");
 const {ProjectClientRouter} = require("./routes/ProjectClientRouter");
 const {DeliverablesRouter} = require("./routes/ProjectDeliverablesRoutes");
 
+const {vendorRouter} = require("./routes/vendorsRouter");
+const {indentsRouter}=require("./routes/indentsRouter");
+const {fundCheckRouter} = require("./routes/FundCheckRouter");
+const {LPCRouter} = require("./routes/LPCRouter");
+const {indentApprovalRouter} = require("./routes/IndentApprovalRouter");
+const {POApprovalRouter} = require("./routes/POApprovalRouter");
+const {POGeneratedStageRouter}=require("./routes/POGenerationRouter");
+const {SRBRouter} = require("./routes/SRBRouter");
+const {ICSRRouter} = require("./routes/ICSRSubmissionRouter");
+const {moduleRouter} = require("./routes/modulesRouter");
+
 app.use(express.json());
 
 app.use(cors({
@@ -89,11 +100,24 @@ app.use("/om",OAndMRouter);
 app.use("/projects",ProjectTrackingRouter);
 app.use("/clients",ProjectClientRouter);
 app.use("/deliverables",DeliverablesRouter);
+app.use("/vendors",vendorRouter);
+app.use('/indents',indentsRouter);
+app.use('/fundCheck',fundCheckRouter);
+app.use('/lpc',LPCRouter);
+app.use('/indentApproval',indentApprovalRouter);
+app.use('/poApproval',POApprovalRouter);
+app.use('/poGenerated',POGeneratedStageRouter);
+app.use('/srb',SRBRouter);
+app.use('/icsr',ICSRRouter);
+app.use('/modules',moduleRouter);
+
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);
 app.get('/activestaffs/all',getActiveStaff);
 app.get('/designations/active',getAllActiveDesignations);
+
+
 // app.get('/roles/all',getAllRoles);
 
 

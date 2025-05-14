@@ -62,6 +62,7 @@ LEFT JOIN mmt_stages stg ON del.stage_id = stg.stage_id;
         if(result.recordset.length<0){
             return res.status(404).send({message:"No record found."});
         }
+        console.log('user : ',req.user);
 
         return res.json({equipmentList:result.recordset});
     }catch(err){

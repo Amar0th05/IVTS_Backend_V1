@@ -128,7 +128,45 @@ async function updateEquipment(req, res) {
         res.status(500).json({ error: err.message });
     }
 }
+async function updateTotalQuantity(req,res){
+    try{
+        const request = await pool.request();
+        const {data} = req.body;
+        const totalQuantity=data.totalQuantity;
+        const id = req.params.id;
 
+        console.log({totalQuantity});
+
+        if(!totalQuantity){
+            return res.status(400).json({ error: "total quantity is required" });
+        }
+
+        if(!id){
+            return res.status(400).json({ error: "id is required" });
+        }
+
+        request.input('totalQuantity',totalQuantity);
+        request.input('id',id);
+
+        const result=await request.query(`
+        
+        update tbl_equipments SET
+                                  total_quantity=@totalQuantity
+        where equipment_id=@id;
+        
+        `);
+
+        if(result.rowsAffected>0){
+            return res.status(200).json({message:"updated successfully"});
+        }
+
+        return res.status(400).json({message:"updation failed"});
+
+    }catch (err){
+        console.log(err);
+        res.status(500).json({ error: err.message });
+    }
+}
 async function deleteEquipment(req, res) {
     try {
         const request = pool.request();
@@ -146,5 +184,6 @@ module.exports = {
     updateEquipment,
     deleteEquipment,
     getEquipmentById,
-    getAllEquipments
+    getAllEquipments,
+    updateTotalQuantity,
 };

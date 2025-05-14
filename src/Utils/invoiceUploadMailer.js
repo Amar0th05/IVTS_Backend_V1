@@ -17,7 +17,12 @@ let pool;
 async function getMails(){
     try{
         const request = await pool.request();
-        const query = `select mail from tbl_user where role in (2,1);`
+        const query = `select mail from tbl_user
+                                            left join tbl_role_module_perms on tbl_role_module_perms.RoleID=tbl_user.role
+                       where tbl_role_module_perms.ModuleID=3 and CanWrite=1
+        ;
+        `;
+
         const result = await request.query(query);
         if (result.recordset.length > 0) {
             return result.recordset;
@@ -32,7 +37,7 @@ async function getMails(){
 async function getMailSentStatus() {
     try{
         const request = await pool.request();
-        const query=`
+        const query=`    
             SELECT
                 o.organisation_name AS organisation,
                 COALESCE(i.MailSent, 0) AS mailSent,
@@ -75,9 +80,9 @@ async function sendAlert(email, organisations) {
             This is an automated notification to inform you that the monthly O&M invoices have not yet been submitted for the following ports:<br><br>
 
             <ul>
+
                 ${organisations.map(organisation => `<li><b>${organisation.organisation}</b></li>`).join('')}
             </ul>
-
             Kindly ensure that the invoices are sent at the earliest.<br><br>
 
            This is a system-generated message. For further assistance, please contact the relevant department.<br><br>
@@ -97,7 +102,7 @@ async function sendAlert(email, organisations) {
 }
 
 function startInvoiceUploadScheduler() {
-    nodecron.schedule('0 10 5 * *', async () => {
+    nodecron.schedule('0 10 10 * *', async () => {
         try {
             console.log("Running invoice upload scheduler...");
             let mails = await getMails();

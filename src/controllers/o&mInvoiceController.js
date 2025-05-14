@@ -15,19 +15,19 @@ let pool;
 async function uploadInvoice(req, res) {
 
 
-    const date=new Date();
+    const date = new Date();
     let month;
-    let year=date.getFullYear();
+    let year = date.getFullYear();
 
-    if(date.getDate()>=15){
-        month=date.getMonth()+1;
-        console.log(month);
-    }else{
+    if(date.getDate()>10){
         month=date.getMonth();
-        console.log(month);
+    }else{
+        month = date.getMonth() - 1;
     }
-
-
+    if (month < 0) {
+        month = 11;
+        year -= 1;
+    }
 
     try {
         if (!req.file || req.file.mimetype !== "application/pdf") {

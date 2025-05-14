@@ -116,7 +116,9 @@ const transporter=mailer.createTransport({
 async function getMails(){
     try{
         const request = await pool.request();
-        const query = `select mail from tbl_user where role in (2,1);`
+        const query = `SELECT COUNT(*) as count
+                       FROM tbl_role_module_perms
+                       WHERE RoleID = 11 AND ModuleID = 7 AND CanRead = 1;`
         const result = await request.query(query);
         if (result.recordset.length > 0) {
             return result.recordset;

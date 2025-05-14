@@ -16,23 +16,32 @@ async function getAllProjects(req,res){
         const request=await pool.request();
 
         let query=`
-                    select
-                        p.ID,
-                        p.ProjectID,
-                        p.ProjectName,
-                        p.ProjectIncharge,
-                        c.ClientName,
-                        p.StartDate,
-                        p.EstEndDate,
-                        p.ActualEndDate,
-                        p.ProjectCost,
-                        p.GST,
-                        p.NoOfDeliverables,
-                        p.ProjectStatus,
-                        p.TotalProjectCost
-                    from tbl_project_tracking p
-                    left join mmt_clients c on p.Client=c.ID
-                    order by p.ID;
+            SELECT
+                p.ID,
+                p.ProjectID,
+                p.ProjectName,
+                p.ProjectIncharge,
+                c.ClientName,
+                p.StartDate,
+                p.EstEndDate,
+                p.ActualEndDate,
+                p.ProjectCost,
+                p.GST,
+                p.NoOfDeliverables,
+                p.ProjectStatus,
+                p.TotalProjectCost
+            FROM tbl_project_tracking p
+                     LEFT JOIN mmt_clients c ON p.Client = c.ID
+            ORDER BY
+                CASE
+                    WHEN p.ProjectStatus = 'Ongoing' THEN 1
+                    WHEN p.ProjectStatus = 'Completed' THEN 2
+                    WHEN p.ProjectStatus = 'Withdrawn' THEN 3
+                    WHEN p.ProjectStatus IS NULL THEN 4
+                    ELSE 5
+                    END,
+                p.ID;
+
         `;
 
 
@@ -98,23 +107,31 @@ async function getProjectById(req, res) {
 
 
 async function createProject(req, res) {
-
     const transaction = new sql.Transaction(pool);
 
     try {
-        const data = req.body;
-        console.log(data);
+
+        const data = JSON.parse(req.body.data);
+        const deliverables = JSON.parse(req.body.deliverables);
+        const payments = JSON.parse(req.body.payments);
+        const files = req.files || [];
 
         if (!data) {
             return res.status(400).json({ message: "Nothing to insert" });
         }
+        if (!deliverables || deliverables.length === 0) {
+            return res.status(400).json({ message: "At least one deliverable is required" });
+        }
+        if (!payments || payments.length === 0) {
+            return res.status(400).json({ message: "At least one payment is required" });
+        }
 
-        let requiredFields = ['ProjectID', 'ProjectName', 'ProjectIncharge', 'Client', 'StartDate', 'ActualEndDate', 'ProjectCost', 'GST', 'NoOfDeliverables', 'ProjectStatus'];
-        let requiredMap = ['Project Id', 'Project Name', 'Project Incharge', 'Client', 'Start Date', 'End Date', 'Project Cost', 'GST', 'Number Of Deliverables', 'Project Status'];
+        const requiredFields = ['ProjectID', 'ProjectName', 'ProjectIncharge', 'Client', 'StartDate', 'ActualEndDate', 'ProjectCost', 'GST', 'NoOfDeliverables', 'ProjectStatus'];
+        const requiredMap = ['Project Id', 'Project Name', 'Project Incharge', 'Client', 'Start Date', 'End Date', 'Project Cost', 'GST', 'Number Of Deliverables', 'Project Status'];
 
-        let errors = [];
+        const errors = [];
         requiredFields.forEach((field, index) => {
-            if(data[field]===null || data[field]===undefined || data[field]===''){
+            if (data[field] === null || data[field] === undefined || data[field] === '') {
                 errors.push(`Field ${requiredMap[index]} is required`);
             }
         });
@@ -123,101 +140,145 @@ async function createProject(req, res) {
             return res.status(400).json({ message: errors[0] });
         }
 
-        if (!data.deliverables || data.deliverables.length === 0) {
-            return res.status(400).json({ message: "At least one deliverable is required" });
+        if (data.EstEndDate && new Date(data.EstEndDate) < new Date(data.StartDate)) {
+            return res.status(400).json({ message: "Project end date must be after project start date" });
+        }
+        if (data.ActualEndDate && new Date(data.ActualEndDate) < new Date(data.StartDate)) {
+            return res.status(400).json({ message: "Actual End Date must be after Start Date." });
         }
 
-        for (let i = 0; i < data.deliverables.length; i++) {
-            let deliverable = data.deliverables[i];
+        if (Number(data.ProjectCost) < 0 || Number(data.GST) < 0) {
+            return res.status(400).json({ message: "Project Cost and GST cannot be negative." });
+        }
 
+        for (let i = 0; i < deliverables.length; i++) {
+            const deliverable = deliverables[i];
             if (!deliverable.name || !deliverable.estimatedDeliveryDate || deliverable.totalCost == null) {
                 return res.status(400).json({ message: `Invalid data at deliverable ${i + 1}` });
             }
-
             if (isNaN(deliverable.totalCost) || Number(deliverable.totalCost) < 0) {
                 return res.status(400).json({ message: "Deliverable cost must be a positive number" });
             }
         }
 
-        if (data.EstEndDate && data.EstEndDate < data.StartDate) {
-            return res.status(400).json({ message: "Project end date must be after project start date" });
-        }
-
-        if (data.ActualEndDate && data.StartDate && data.ActualEndDate < data.StartDate) {
-            return res.status(400).json({ message: "Actual End Date must be after Start Date." });
-        }
-
-        if (data.ProjectCost < 0 || data.GST < 0) {
-            return res.status(400).json({ message: "Project Cost and GST cannot be negative." });
-        }
-
-        data.EstEndDate = data.EstEndDate || null;
-
-
         await transaction.begin();
 
-
         const projectRequest = new sql.Request(transaction);
+        const projectQuery = `
+            INSERT INTO tbl_project_tracking (
+                ProjectID, ProjectName, ProjectIncharge, Client, StartDate, EstEndDate, ActualEndDate, 
+                NoOfDeliverables, ProjectCost, GST, ProjectStatus
+            )
+            OUTPUT INSERTED.ID
+            VALUES (
+                @ProjectID, @ProjectName, @ProjectIncharge, @Client, @StartDate, @EstEndDate, 
+                @ActualEndDate, @NoOfDeliverables, @ProjectCost, @GST, @ProjectStatus
+            );
+        `;
+
         projectRequest
-            .input('ProjectID', data.ProjectID)
-            .input('ProjectName', data.ProjectName)
+            .input('ProjectID',  data.ProjectID)
+            .input('ProjectName',data.ProjectName)
             .input('Client', data.Client)
-            .input('ProjectIncharge', data.ProjectIncharge)
+            .input('ProjectIncharge',  data.ProjectIncharge)
             .input('StartDate', data.StartDate)
-            .input('EstEndDate', data.EstEndDate)
-            .input('ActualEndDate', data.ActualEndDate)
+            .input('EstEndDate', data.EstEndDate || null)
+            .input('ActualEndDate',data.ActualEndDate || null)
             .input('ProjectCost', data.ProjectCost)
             .input('GST', data.GST)
             .input('NoOfDeliverables', data.NoOfDeliverables)
             .input('ProjectStatus', data.ProjectStatus);
 
-        const query = `
-            INSERT INTO tbl_project_tracking (
-                ProjectID, ProjectName, ProjectIncharge, Client, StartDate, EstEndDate, ActualEndDate, NoOfDeliverables, ProjectCost, GST, ProjectStatus
-            )
-            OUTPUT INSERTED.ID
-            VALUES (
-                       @ProjectID, @ProjectName, @ProjectIncharge, @Client, @StartDate, @EstEndDate, @ActualEndDate, @NoOfDeliverables, @ProjectCost, @GST, @ProjectStatus
-                   );
-        `;
-
-        const result = await projectRequest.query(query);
-
-        if (result.rowsAffected.length === 0) {
+        const projectResult = await projectRequest.query(projectQuery);
+        if (projectResult.rowsAffected[0] === 0) {
             await transaction.rollback();
-            return res.status(400).json({ message: "Project cannot be created" });
+            return res.status(400).json({ message: "Project creation failed" });
         }
 
-        const projectId = result.recordset[0].ID;
+        const projectId = projectResult.recordset[0].ID;
 
-
-        for (let deliverable of data.deliverables) {
+        for (const deliverable of deliverables) {
             const deliverableRequest = new sql.Request(transaction);
-            deliverableRequest
-                .input("ProjectID", data.ProjectID)
-                .input("DeliverableName",deliverable.name)
+            await deliverableRequest
+                .input("ProjectID",  data.ProjectID)
+                .input("DeliverableName", deliverable.name)
                 .input("EstDeliveryDate", deliverable.estimatedDeliveryDate)
-                .input("Remarks", deliverable.remarks || null)
-                .input("TotalCost", deliverable.totalCost);
+                .input("Remarks",  deliverable.remarks || null)
+                .input("TotalCost",  deliverable.totalCost)
+                .query(`
+                    INSERT INTO tbl_project_deliverables 
+                    (ProjectID, EstDeliveryDate, Remarks, TotalCost, DeliverableName)
+                    VALUES (@ProjectID, @EstDeliveryDate, @Remarks, @TotalCost, @DeliverableName);
+                `);
+        }
 
-            await deliverableRequest.query(`
-                INSERT INTO tbl_project_deliverables (ProjectID, EstDeliveryDate, Remarks, TotalCost,DeliverableName)
-                VALUES (@ProjectID, @EstDeliveryDate, @Remarks, @TotalCost,@DeliverableName);
-            `);
+        for (let index = 0; index < payments.length; index++) {
+            const payment = payments[index];
+            const paymentRequest = new sql.Request(transaction);
+
+            if (!payment.paymentDate) {
+                await transaction.rollback();
+                return res.status(400).json({ message: "Payment date is required" });
+            }
+            if (!payment.paymentTerm) {
+                await transaction.rollback();
+                return res.status(400).json({ message: "Payment terms are required" });
+            }
+
+
+            payment.GST = payment.GST || 0;
+            payment.costExcGST = payment.costExcGST || 0;
+            payment.paymentReceived = payment.paymentReceived || 0;
+
+
+            const file = files.find(f => f.fieldname === `payment_invoice_${index}`);
+
+            if(!file){
+                return res.status(400).json({ message: "Invoice is required" });
+            }
+            const invoiceBuffer = file.buffer;
+
+            await paymentRequest
+                .input('ProjectID',  data.ProjectID)
+                .input('GST',  payment.GST)
+                .input('costExcGST',  payment.costExcGST)
+                .input('paymentDate', payment.paymentDate)
+                .input('paymentReceived', payment.paymentReceived)
+                .input('paymentTerm', payment.paymentTerm)
+                .input('totalCost', payment.totalCost)
+                .input('invoice', sql.VarBinary(sql.MAX), invoiceBuffer)
+                .query(`
+                    INSERT INTO tbl_project_payment_terms 
+                    (ProjectID, GST, Cost, PaymentReceivedDate, PaymentReceived, PaymentTerms, invoice)
+                    VALUES (@ProjectID, @GST, @costExcGST, @paymentDate, @paymentReceived, @paymentTerm, @invoice);
+                `);
         }
 
         await transaction.commit();
-        return res.status(201).json({ id: projectId, message: "Project created successfully with deliverables" });
+        return res.status(201).json({
+            id: projectId,
+            message: "Project created successfully with deliverables and payments"
+        });
 
     } catch (err) {
-        console.error(err);
-        if(err.number===2627){
+        console.error("Error in createProject:", err);
+
+        try {
+            if (transaction._aborted === false) {
+                await transaction.rollback();
+            }
+        } catch (rollbackErr) {
+            console.error("Rollback failed:", rollbackErr);
+        }
+
+        if (err.number === 2627) {
             return res.status(400).json({ message: "Project with this ID already exists" });
         }
-        if (transaction._aborted === false) {
-            await transaction.rollback().catch(console.error);
-        }
-        return res.status(500).json({ message: err.message || "Internal Server Error" });
+
+        return res.status(500).json({
+            message: err.message || "Internal Server Error",
+            details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
     }
 }
 
@@ -323,11 +384,43 @@ async function updateProject(req,res){
     }
 }
 
+async function getStatusCounts(req,res){
+    try{
+
+        let request=await pool.request();
+        let result=await request.query('select ProjectStatus,Count(*) as Count from tbl_project_tracking GROUP BY (ProjectStatus);');
+        return res.status(200).json(result.recordset);
+
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({message:err.message || "Internal Server Error"});
+    }
+}
+
+async function getProjectPaidStatus(req,res){
+    try{
+        let request=await pool.request();
+        let query=`
+            select pt.TotalCost,pt.PaymentReceived,p.ProjectStatus  from tbl_project_payment_terms pt
+            left join tbl_project_tracking p on p.ProjectID=pt.ProjectID
+            where p.ProjectStatus in ('Ongoing','Completed');
+        `;
+        let result = await request.query(query);
+        return res.status(200).json(result.recordset);
+
+
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({message:err.message || "Internal Server Error"});
+    }
+}
+
 module.exports = {
 
     getAllProjects,
     getProjectById,
     createProject,
     updateProject,
-
+    getStatusCounts,
+    getProjectPaidStatus
 }
