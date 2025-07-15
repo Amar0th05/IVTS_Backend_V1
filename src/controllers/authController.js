@@ -7,6 +7,7 @@ require('dotenv').config();
 
 
 async function login(req, res) {
+    console.log("Login request received:", req.body);
     try {
         const { mail, password } = req.body;
 

@@ -83,6 +83,7 @@ async function createVendor(req, res) {
                 });
             }
         }
+        console.log("File Data: ", req.file);
         let request = await pool.request();
         request
             .input('VendorName', data.VendorName)
@@ -94,15 +95,16 @@ async function createVendor(req, res) {
             .input('VendorAccountNumber', data.VendorAccountNumber)
             .input('VendorIFSC', data.VendorIFSC)
             .input('VendorBank', data.VendorBank)
-            .input('VendorBranch', data.VendorBranch);
+            .input('VendorBranch', data.VendorBranch)
+            .input('BankDetailsDoc', sql.VarBinary, req.file ? req.file.buffer : null)
 
         let query = `
             INSERT INTO mmt_vendors
-            (VendorName, Address, Phone, Email, GSTNo, PANNo, AccountNo, IFSCode, BankName, Branch)
+            (VendorName, Address, Phone, Email, GSTNo, PANNo, AccountNo, IFSCode, BankName, Branch,BankDetails)
             VALUES
                 (@VendorName, @VendorAddress, @VendorPhone, @VendorMailAddress,
                  @VendorGST, @VendorPAN, @VendorAccountNumber, @VendorIFSC,
-                 @VendorBank, @VendorBranch);
+                 @VendorBank, @VendorBranch,@BankDetailsDoc);
         `;
 
         let result = await request.query(query);
@@ -119,10 +121,66 @@ async function createVendor(req, res) {
     }
 }
 
+async function replaceBankDocument(req, res) {
+    console.log("Replace Bank Document called");
+ const vendorId = req.params.id;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  try {
+    const request = await pool.request();
+request.input('ApprovalID',vendorId); // specify INT type
+request.input('BankDetails', sql.VarBinary, req.file ? req.file.buffer : null); // specify VARBINARY(MAX)
+
+await request.query(`
+  UPDATE mmt_vendors
+  SET BankDetails = @BankDetails
+  WHERE VendorID = @ApprovalID
+`);
+
+    res.status(200).json({ message: "File uploaded and replaced successfully." });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ message: "Failed to upload file." });
+  }
+}
+
+async function downloadBankDocument(req, res) {
+     const vendorId = req.params.id;
+
+  try {
+    const request = await pool.request();
+    request.input('VendorID', vendorId);
+
+    const result = await request.query(`
+      SELECT BankDetails FROM mmt_vendors WHERE VendorID = @VendorID
+    `);
+
+    const fileBuffer = result.recordset[0]?.BankDetails;
+
+    if (!fileBuffer) {
+      return res.status(404).send("No file found for this vendor.");
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=vendor_${vendorId}.pdf`);
+    res.send(fileBuffer);
+  } catch (err) {
+    console.error("Download error:", err);
+    res.status(500).json({ message: "Error retrieving file." });
+  }
+}
+
+
 
 module.exports= {
     getAllActiveVendors,
     getAllVendors,
     getVendorByID,
     createVendor,
+    downloadBankDocument,
+    replaceBankDocument
 };

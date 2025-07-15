@@ -53,8 +53,8 @@ const {moduleRouter} = require("./routes/modulesRouter");
 app.use(express.json());
 
 app.use(cors({
-    origin: process.env.CLIENT_URL.toString(),
-    exposedHeaders: ['Authorization']
+    origin: process.env.CLIENT_URL,
+  exposedHeaders: ['Authorization'],
 }));
 
 app.use(logger);
