@@ -1,6 +1,6 @@
 const { sql, getPool } = require("../config/dbconfig");
 const {getVendorByID} = require("./vendorsController");
-const {sendFCAlert, notifyIndenter} = require("../Utils/IndentMailer");
+const {sendFundCheckAlert, notifyIndenter} = require("../Utils/IndentMailer");
 
 let pool;
 
@@ -97,6 +97,11 @@ async function createIndent(req, res) {
                 `);
         }
 
+        const Emailquery=`select ToEmails,CcEmails from emailManagement WHERE Stage = 'New Indent';`
+        const FundCheckquery=`select ToEmails,CcEmails from emailManagement WHERE Stage = 'Fund Check';`
+        const emailResult = await request.query(Emailquery);
+        const fundCheckResult = await request.query(FundCheckquery);
+
         await transaction.commit();
         let vendor=await getVendorByID(selectedVendor);
         console.log('selected vendor', selectedVendor);
@@ -126,8 +131,18 @@ async function createIndent(req, res) {
             Delivery:commercialDetails.delivery
         }
 
-        sendFCAlert(mailData).catch(console.error);
-        notifyIndenter(req.user.mail, mailData).catch(console.error);
+        // sendFCAlert(mailData).catch(console.error);
+        console.log('Mail data:', req.user.mail, req.user);
+        if (emailResult.rowsAffected[0] > 0 && fundCheckResult.rowsAffected[0] > 0) {
+            let To = emailResult.recordset[0].ToEmails;   // e.g. "user1@domain.com,user2@domain.com"
+            let cc = emailResult.recordset[0].CcEmails; 
+            let FTo=fundCheckResult.recordset[0].ToEmails;  // e.g. "cc1@domain.com,cc2@domain.com"
+            let FCc=fundCheckResult.recordset[0].CcEmails;  // e.g. "cc1@domain.com,cc2@domain.com"
+        notifyIndenter(To,cc, mailData);
+        sendFundCheckAlert(FTo, FCc, mailData);
+
+        }
+        
 
         console.log('Indent and items inserted successfully');
         return res.status(201).json({ message: 'Indent created successfully' });

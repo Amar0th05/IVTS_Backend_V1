@@ -16,6 +16,8 @@ let pool;
 // const sql = require('mssql');
 
 async function createRecord(req, res) {
+    console.log("POs");
+
     const pool = await sql.connect();
     const transaction = new sql.Transaction(pool);
 
@@ -88,6 +90,89 @@ async function createRecord(req, res) {
             await transaction.rollback();
             return res.status(500).json({ message: "Failed to update indent stage" });
         }
+
+        await transaction.commit();
+        return res.status(200).json({ message: "SRB created and indent updated successfully" });
+
+    } catch (err) {
+        console.error("Error in createRecord:", err);
+        if (transaction._aborted !== true) {
+            await transaction.rollback();
+        }
+        return res.status(500).send({ message: err.message || "Internal server error" });
+    }
+}
+
+// without PO
+async function createRecordPo(req, res) {
+    console.log("enter PO");
+    const pool = await sql.connect();
+    const transaction = new sql.Transaction(pool);
+
+    try {
+        let data = req.body;
+
+        if (!data) return res.status(400).send({ message: "No Data received" });
+        if (!req.file) return res.status(400).send({ message: "Please upload a file" });
+
+        // const requiredFields = ['SRBFor','Type', 'PONumber', 'EmpName', 'Discount', 'DeductedAmount', 'InvoiceNo', 'InvoiceDate', 'Warranty', 'Others','OtherCharges', 'GSTAmount', 'GrandTotal'];
+        // for (const field of requiredFields) {
+        //     if (data[field] === undefined || data[field] === null || data[field] === '') {
+        //         return res.status(400).send({ message: `Missing required field: ${field}` });
+        //     }
+        // }
+
+
+
+        const documentBuffer = req.file.buffer;
+
+
+        try {
+            await transaction.begin();
+        } catch (e) {
+            return res.status(500).send({ message: "Failed to start transaction" });
+        }
+
+        const request = new sql.Request(transaction);
+
+
+        request.input('srbproductNo', sql.VarChar(50), data.srbproductNo);
+        request.input('srbSerialNo', sql.VarChar(50), data.srbSerialNo);
+        request.input('srbType', sql.VarChar(50), data.srbType);
+        request.input('srbDescription', sql.VarChar(500), data.srbDescription);
+        request.input('srbQuantity', sql.Decimal(10, 2), data.srbQuantity);
+        request.input('srbUnit', sql.VarChar(20), data.srbUnit);
+        request.input('srbUnitprice', sql.Decimal(12, 2), data.srbUnitprice);
+        request.input('srbTotalprice', sql.Decimal(12, 2), data.srbTotalprice);
+        request.input('srbVendorName', sql.VarChar(50), data.srbVendorName);
+        request.input('srbInvoiceNumber', sql.VarChar(20), data.srbInvoiceNumber);
+        request.input('srbInvoiceDate', sql.Date, data.srbInvoiceDate);
+        request.input('srbGSTAmount', sql.Decimal(12, 2), data.srbGSTAmount);
+        request.input('srbOtherCharges', sql.Decimal(12, 2), data.srbOtherCharges);
+        request.input('srbGrandTotal', sql.Decimal(12, 2), data.srbGrandTotal);
+        request.input('Document', sql.VarBinary(sql.MAX), documentBuffer);
+
+
+        console.log(data);
+
+        await request.query(`
+            INSERT INTO tbl_withoutPo
+            (ProductNo, SerialNo, Type, Description, Quantity, Unit, UnitPrice, TotalPrice, VendorName, InvoiceNo, InvoiceDate, GSTAmount, OtherCharges, GrandTotal, Document)
+            VALUES
+                (@srbproductNo, @srbSerialNo, @srbType, @srbDescription,@srbQuantity,@srbUnit,@srbUnitprice,@srbTotalprice,@srbVendorName,@srbInvoiceNumber,@srbInvoiceDate,@srbGSTAmount,@srbOtherCharges,@srbGrandTotal,@Document)
+        `);
+
+
+        // const updateResult = await request.query(`
+        //     UPDATE tbl_indents 
+        //     SET CurrentStage = 'Awaiting For ICSR Submission', StageUpdatedAt = GETDATE() 
+        //     WHERE IndentID = @IndentID
+        // `);
+
+        // if (updateResult.rowsAffected[0] === 0) {
+        //     await transaction.rollback();
+        //     return res.status(500).json({ message: "Failed to update indent stage" });
+        // }
 
         await transaction.commit();
         return res.status(200).json({ message: "SRB created and indent updated successfully" });
@@ -175,4 +260,4 @@ async function downloadDocument(req, res) {
 }
 
 
-module.exports= {createRecord,getRecordById,downloadDocument}
+module.exports= {createRecord,createRecordPo,getRecordById,downloadDocument}

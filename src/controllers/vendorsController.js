@@ -1,5 +1,6 @@
 const {sql,getPool} = require('../config/dbconfig')
 const {request} = require("express");
+const {sendVendorCreated} = require('../Utils/IndentMailer');
 
 let pool;
 
@@ -110,7 +111,15 @@ async function createVendor(req, res) {
         let result = await request.query(query);
 
         if (result.rowsAffected[0] > 0) {
+            let query = `select ToEmails, CcEmails from emailManagement WHERE Stage = 'New Indent';`
+            let result = await request.query(query);
+
+            let To = result.recordset[0].ToEmails;   // e.g. "user1@domain.com,user2@domain.com"
+            let cc = result.recordset[0].CcEmails;   // e.g. "cc1@domain.com,cc2@domain.com"
+            sendVendorCreated(To, cc,data);
+
             return res.status(200).json({ message: "Vendor Created Successfully" });
+
         }
 
         return res.status(500).json({ message: "Something went wrong" });

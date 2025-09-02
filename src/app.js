@@ -18,6 +18,8 @@ const{getAllActiveDesignations}=require('./controllers/DesignationController')
 
 
 
+
+
 const {userRolesRouter}=require('./routes/RoleRoutes');
 const{getAllRoles}=require('./controllers/rolesController');
 const {authMiddleware}=require('./middlewares/authMiddleware');
@@ -49,6 +51,12 @@ const {POGeneratedStageRouter}=require("./routes/POGenerationRouter");
 const {SRBRouter} = require("./routes/SRBRouter");
 const {ICSRRouter} = require("./routes/ICSRSubmissionRouter");
 const {moduleRouter} = require("./routes/modulesRouter");
+const {EmailRouter} = require('./routes/EmailManagementRoutes'); 
+
+const {internsRouter} = require('./routes/internsRouter');
+const {staffsRouter}=require('./routes/staffsRouter');
+
+
 
 app.use(express.json());
 
@@ -62,7 +70,7 @@ app.use(logger);
 connectToDB();
 
 app.use(async (req, res, next) => {
-    if (!req.path.startsWith('/auth') && !req.path.startsWith('/password')) {
+    if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship')) {
         try {
             await authMiddleware(req, res, next);
         } catch (error) {
@@ -110,12 +118,21 @@ app.use('/poGenerated',POGeneratedStageRouter);
 app.use('/srb',SRBRouter);
 app.use('/icsr',ICSRRouter);
 app.use('/modules',moduleRouter);
+app.use('/api', EmailRouter);
+app.use('/internship/apply/',internsRouter);
 
+     
 
 app.use('/designations',designationRouter);
 app.use('/cl',contractLogRouter);
 app.get('/activestaffs/all',getActiveStaff);
 app.get('/designations/active',getAllActiveDesignations);
+app.use('/staffs/all',staffsRouter);
+app.use('/intern',internsRouter);
+
+
+
+
 
 
 // app.get('/roles/all',getAllRoles);
