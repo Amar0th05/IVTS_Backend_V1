@@ -44,7 +44,7 @@ async function getAllStaffs(req, res) {
     const result = await request.query(query);
 
     if (result.recordset.length > 0) {
-      return res.json({ staffDetails: result.recordset });
+      return res.json({ staffs: result.recordset });
     } else {
       return res.status(404).json({ message: "No records found" });
     }
@@ -59,6 +59,27 @@ async function getAllStaffs(req, res) {
   }
 }
 
+async function addStaffs(req,res){
+
+  const data=req.body;
+
+  console.log("Data received in backend:",data);
+
+  if(!data){
+    return res.status(400).json({message:"No data provided"});
+  }
+
+  try{
+
+    const request=pool.request();
+    request.input('employeeId',sql.NVarChar,data.staffName);
+
+  }catch(err){
+
+  }
 
 
-module.exports={getAllStaffs}
+}
+
+
+module.exports={getAllStaffs,addStaffs};

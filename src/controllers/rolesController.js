@@ -219,7 +219,10 @@ async function getRolePermissionsForModules(req, res) {
                    writes:record.Writes,
                    reads:record.Reads,
                }
+               console.log("role:", role);
+
                roles[record.RoleName.toUpperCase()]=role;
+               console.log("roles:", roles);
             });
 
             // console.log(roles);
@@ -258,6 +261,7 @@ async function getRolePermissionsForModulesById(req, res) {
             GROUP BY mur.role_id, mur.role
             ORDER BY mur.role;
         `;
+
 
         const result = await request.query(query);
 

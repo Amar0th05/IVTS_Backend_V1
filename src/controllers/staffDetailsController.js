@@ -237,147 +237,6 @@ async function getStaffByIdWithoutJoin(req, res) {
 
 
 
-
-// async function addStaffDetails(req, res) {
-//     try {
-//         const request = pool.request();
-//         const { data } = req.body;
-//         const {insuranceData}=req.body;
-//         const {documentData}=req.body;
-
-
-//         if (!data) return res.status(404).json({ message: 'No inputs found' });
-//         if (data.staffID === null) return res.status(404).json({ message: 'No ID found' });
-//         if (data.locationOfWork === null) return res.status(404).json({ message: 'Location of Work not found' });
-
-//         let columns = ['staff_id', 'location_of_work'];
-//         let values = ['@id', '@locationOfWork'];
-//         request.input('id', sql.NVarChar(20), data.staffID);
-//         request.input('locationOfWork', sql.Int, data.locationOfWork);
-
-//         if (data.staffName !== undefined) {
-//             columns.push("staff_name");
-//             values.push("@name");
-//             request.input('name', sql.NVarChar(25), data.staffName);
-//         }
-
-//         if (data.dateOfBirth !== undefined) {
-//             columns.push("date_of_birth");
-//             values.push("@date_of_birth");
-//             request.input('date_of_birth', sql.Date, data.dateOfBirth);
-//         }
-
-//         if (data.aadharNumber !== undefined) {
-//             columns.push("aadhaar_number");
-//             values.push("@aadharNumber");
-//             request.input('aadharNumber', sql.Numeric(12, 0), data.aadharNumber);
-//         }
-
-//         if (data.contactNumber !== undefined) {
-//             columns.push("contact_number");
-//             values.push("@contactNumber");
-//             request.input('contactNumber', sql.Numeric(10, 0), data.contactNumber);
-//         }
-
-//         if (data.mail !== undefined) {
-//             columns.push("email_id");
-//             values.push("@mail");
-//             request.input('mail', sql.NVarChar(320), data.mail);
-//         }
-
-//         if (data.permanentAddress !== undefined) {
-//             columns.push("permanent_address");
-//             values.push("@permanentAddress");
-//             request.input('permanentAddress', sql.NVarChar(255), data.permanentAddress);
-//         }
-
-//         if (data.dateOfJoining !== undefined) {
-//             columns.push("date_of_joining");
-//             values.push("@dateofJoining");
-//             request.input('dateofJoining', sql.Date, data.dateOfJoining);
-//         }
-
-//         if (data.salary !== undefined) {
-//             columns.push("salary_at_joining");
-//             values.push("@salary");
-//             request.input('salary', sql.Decimal(10, 2), data.salary);
-//         }
-
-//         if (data.qualifications !== undefined) {
-//             columns.push("qualification");
-//             values.push("@qualifications");
-//             request.input('qualifications', sql.NVarChar(100), data.qualifications);
-//         }
-
-//         if (data.highestQualification !== undefined) {
-//             columns.push("highest_qualification");
-//             values.push("@highestQualification");
-//             request.input('highestQualification', sql.Int, data.highestQualification);
-//         }
-
-//         if (data.certifications !== undefined) {
-//             columns.push("certifications");
-//             values.push("@certifications");
-//             request.input('certifications', sql.NVarChar(255), data.certifications);
-//         }
-
-//         if (data.courses !== undefined) {
-//             columns.push("courses");
-//             values.push("@courses");
-//             request.input('courses', sql.Int, data.courses);
-//         }
-
-//         columns.push("status");
-//         values.push("@status");
-//         request.input('status', sql.Bit, 1);
-
-//         const staffQuery = `INSERT INTO tbl_staff (${columns.join(", ")}) VALUES (${values.join(", ")})`;
-//         await request.query(staffQuery);
-
-
-//         if (insuranceData) {
-//             const insuranceRequest = pool.request();
-//             const { insuranceProvider, policyNumber, policyStartDate, policyExpiryDate,updatedBy } = insuranceData;
-
-//             if(insuranceProvider && policyNumber && policyStartDate && updatedBy && policyExpiryDate) {
-//                 insuranceRequest.input('emp_id', sql.NVarChar(20), data.staffID);
-//                 insuranceRequest.input('insurance_provider', sql.NVarChar(255), insuranceProvider||null);
-//                 insuranceRequest.input('policy_number', sql.NVarChar(100), policyNumber||null);
-//                 insuranceRequest.input('policy_start_date', sql.Date, policyStartDate||null);
-//                 insuranceRequest.input('policy_expiry_date', sql.Date, policyExpiryDate||null);
-//                 insuranceRequest.input('insurance_updated', sql.Bit, 0);
-//                 insuranceRequest.input('updated_by',sql.NVarChar,updatedBy||null);
-
-//                 const insuranceQuery = `INSERT INTO tbl_employee_insurance (emp_id, insurance_provider, policy_number, policy_start_date, policy_expiry_date, insurance_updated) 
-//                                     VALUES (@emp_id, @insurance_provider, @policy_number, @policy_start_date, @policy_expiry_date, @insurance_updated)`;
-
-//                 await insuranceRequest.query(insuranceQuery);
-//             }
-
-//         }
-
-//         if(documentData){
-//             const documentRequest=pool.request();
-//             const {aadhaarFile,panFile,academicFile,idCardFile,certFile10,certFile12,certFileGMDSS,certFileIALA}=documentData;
-//             documentRequest.input('staff_id',sql.NVARCHAR(20),data.staffID);
-//             documentRequest.input('aadhaarFile',sql.NVarChar(255),aadhaarFile.buffer||null);
-//             documentRequest.input('panFile',sql.NVarChar(255),panFile.buffer||null);
-//             documentRequest.input('academicFile',sql.NVarChar(255),academicFile?academicFile.buffer||null);
-//             documentRequest.input('idCardFile',sql.NVarChar(255),idCardFile?idCardFile.buffer||null);
-//             documentRequest.input('certFile10',sql.NVarChar(255),certFile10?certFile10.buffer||null);
-//             documentRequest.input('certFile12',sql.NVarChar(255),certFile12?certFile12.buffer||null);
-//             documentRequest.input('certFileGMDSS',sql.NVarChar(255),certFileGMDSS?certFileGMDSS.buffer||null);
-//             documentRequest.input('certFileIALA',sql.NVarChar(255),certFileIALA?certFileIALA.buffer||null);
-//         }
-
-//         res.json({ message: "Staff details and insurance inserted successfully" });
-//     } catch (err) {
-//         console.error("Error inserting staff or insurance details:", err);
-//         res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error" });
-//     }
-// }
-
-
 async function addStaffDetails(req, res) {
   try {
     console.log("Adding staff details with data:", req.body);
@@ -504,9 +363,12 @@ async function addStaffDetails(req, res) {
       const certName = otherCertNames[i] || 'Unnamed Certificate';
 
       const certReq = pool.request();
-      certReq.input('staff_id', sql.NVarChar(20), req.body.staffID); // or however you're passing it
+      console.log("Inserting other certificate:", data.staffID, certName);
+      certReq.input('staff_id', sql.NVarChar(20), data.staffID); // or however you're passing it
       certReq.input('certificate_name', sql.NVarChar(255), certName);
       certReq.input('certificate_file', sql.VarBinary(sql.MAX), certFile.buffer);
+
+      
 
       await certReq.query(`
         INSERT INTO dbo.OtherCertificates (StaffID, CertificateName, CertificateFile)

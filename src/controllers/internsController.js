@@ -158,7 +158,7 @@ request.input('IdProofFile', sql.VarBinary(sql.MAX), files?.idProof?.[0]?.buffer
       )
     `);
 
-    res.status(201).json({ message: 'Application submitted successfully!' });
+    res.status(200).json({ message: 'Application submitted successfully!' });
 
   } catch (err) {
     console.error('SERVER ERROR:', err);
