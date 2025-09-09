@@ -299,6 +299,7 @@ async function updatePermission(req, res) {
         let roleId = req.params.id;
         let data = req.body;
 
+        console.log('updatePermission');
 
         if (!roleId) {
             return res.status(400).json({ message: "Missing required field role id" });
@@ -330,33 +331,51 @@ async function updatePermission(req, res) {
         request.input('ModuleID', data.ModuleID);
         request.input('Permission', data.permission);
 
+        let read=0;
+        let write=0;
 
-        let checkQuery = `
-            SELECT COUNT(*) as count
-            FROM tbl_role_module_perms
-            WHERE RoleID = @RoleID  AND CanRead = 1;
-        `;
-
-        let checkResult = await request.query(checkQuery);
-
-        console.log(checkResult.recordset[0]);
-        if (checkResult.recordset[0].count === 1 && data.permission === 'CanRead' && data.value === 0) {
-            return res.status(400).json({ message: "At least one read permission is required for a role" });
+        if(data.permission == "CanRead"){
+            read=1;
+            write=0;
+        }
+        else{
+            write=1;
+            read=0;
         }
 
+        request.input('CanRead',read);
+        request.input('CanWrite',write);
 
+   
+
+
+        let checkModule=`SELECT * FROM tbl_role_module_perms WHERE RoleID=@RoleID AND ModuleID=@ModuleID;`
+
+        let moduleResult= await request.query(checkModule);
+
+        let modulequery=`INSERT INTO tbl_role_module_perms VALUES(@RoleID,@ModuleID,@Canread,@CanWrite);`;
+
+        
         const query = `
             UPDATE tbl_role_module_perms
             SET ${data.permission} = @Value
             WHERE RoleID = @RoleID AND ModuleID = @ModuleID;
         `;
 
-        let result = await request.query(query);
+        if(moduleResult.recordset.length == "0"){
+           const insertModule=await request.query(modulequery);
+           if (insertModule.rowsAffected[0] === 0) {
+            return res.status(500).json({ message: "Something went wrong, please try again" });
+           };
 
-        if (result.rowsAffected[0] === 0) {
+        }
+        else{
+           const result=await request.query(query);
+            if (result.rowsAffected[0] === 0) {
             return res.status(500).json({ message: "Something went wrong, please try again" });
         }
-
+        }
+        
         return res.status(200).json({ message: "Permission updated successfully" });
 
     } catch (err) {

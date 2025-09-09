@@ -2,7 +2,7 @@ const http = require("http");
 const app = require("./app.js");
 const {startScheduler}=require('./Utils/ContractExpiryMailer');
 const {startInvoiceUploadScheduler}=require('./Utils/invoiceUploadMailer');
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5500;
 
 const server = http.createServer(app);
 server.listen(PORT, () => {
