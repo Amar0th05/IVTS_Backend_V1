@@ -39,7 +39,8 @@ async function getAllIntern(req, res) {
         [PreferredEndDate],
         [InternshipMode],
         [HowHeardAboutUs],
-        [SubmissionDate]
+        [SubmissionDate],
+        [status]
         -- do not select VARBINARY here to avoid huge payload
       FROM [IVTS_MANAGEMENT].[dbo].[internApplicants]
     `;
@@ -264,18 +265,18 @@ if (data.isPartOfCurriculum !== undefined) {
 
 
 // toggle staff
-async function toggleStaffStatus(req, res) {
+async function toggleInternStatus(req, res) {
     try {
         const {id}= req.params;
         const request = await pool.request();
 
         // console.log(id);
-        request.input("staff_id", sql.NVarChar(20), id);
+        request.input("Id", sql.NVarChar(20), id);
 
         const result = await request.query(`
-            UPDATE tbl_staff
+            UPDATE dbo.internApplicants
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
-            WHERE staff_id = @staff_id
+            WHERE id = @Id
         `);
 
         if (result.rowsAffected[0] > 0) {
@@ -294,7 +295,7 @@ async function getActiveStaff(req, res) {
     try {
         const pool = await getPool(req);
 
-        const query = `SELECT staff_id, staff_name FROM tbl_staff WHERE status = 1;`;
+        const query = `SELECT id, FullName FROM internApplicants WHERE status = 1;`;
         const result = await pool.query(query);
 
         if (result.recordset.length > 0) {
@@ -484,7 +485,7 @@ async function uploadDocument(req,res){
 
 
 
-module.exports = { getAllIntern, getInternById ,getMetadata ,downloadDocument,deleteDocument,uploadDocument,updateinternDetails};
+module.exports = { getAllIntern, getInternById ,getMetadata ,downloadDocument,deleteDocument,uploadDocument,updateinternDetails,toggleInternStatus};
 
 
 

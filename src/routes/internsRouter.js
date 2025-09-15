@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { getAllIntern, getInternById, getMetadata, downloadDocument,deleteDocument,uploadDocument,updateinternDetails} = require('../controllers/internsController');
+const { getAllIntern, getInternById, getMetadata, downloadDocument,deleteDocument,uploadDocument,updateinternDetails,toggleInternStatus} = require('../controllers/internsController');
 
 const internsRouter = express.Router();
 
@@ -21,6 +21,8 @@ internsRouter.get('/:id/documents/metadata', getMetadata);
 internsRouter.get('/:internId/documents/:docName', downloadDocument);
 internsRouter.delete('/:internId/documents/:docName', deleteDocument);
 internsRouter.post('/:internId/documents/:docName', upload.single('file'), uploadDocument);
+internsRouter.put('/status/:id',toggleInternStatus);
+
 
 
 
