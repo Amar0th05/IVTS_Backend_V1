@@ -1,25 +1,27 @@
 const express = require('express');
 const multer = require('multer');
-const { getAllIntern,downloadInternFile,createIntern } = require('../controllers/internsController');
+const { getAllIntern, getInternById, getMetadata, downloadDocument,deleteDocument,uploadDocument,updateinternDetails} = require('../controllers/internsController');
 
 const internsRouter = express.Router();
 
 // Use memory storage (you can switch to diskStorage if you want to save files physically)
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
+// const uploadFields = upload.fields([
+//   { name: "BonafideFileData", maxCount: 1 },
+//   { name: "ResumeFileData", maxCount: 1 },
+//   { name: "PhotoFileData", maxCount: 1 },
+//   { name: "IdProofFileData", maxCount: 1 },
+// ]);
 
-internsRouter.get('/download/:id/:fileType', downloadInternFile);
+
+internsRouter.put('/:id',updateinternDetails);
 internsRouter.get('/all',getAllIntern);
-// Accept multiple file fields
-internsRouter.post(
-  '/',
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'photo', maxCount: 1 },
-    { name: 'idProof', maxCount: 1 },
-    { name: 'bonafide', maxCount: 1 },
-  ]),
-  createIntern
-);
+internsRouter.get('/:id', getInternById);
+internsRouter.get('/:id/documents/metadata', getMetadata);
+internsRouter.get('/:internId/documents/:docName', downloadDocument);
+internsRouter.delete('/:internId/documents/:docName', deleteDocument);
+internsRouter.post('/:internId/documents/:docName', upload.single('file'), uploadDocument);
+
+
 
 module.exports = {internsRouter} ;

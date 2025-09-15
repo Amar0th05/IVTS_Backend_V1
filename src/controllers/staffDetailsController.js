@@ -392,6 +392,7 @@ async function updateStaffDetails(req, res) {
         const request = pool.request();
         const { data } = req.body;
 
+
         if (!data) return res.status(400).json({ message: 'No inputs found' });
         if (!data.staffID) return res.status(400).json({ message: 'No ID found' });
 
