@@ -55,6 +55,7 @@ const {EmailRouter} = require('./routes/EmailManagementRoutes');
 
 const {internsRouter} = require('./routes/internsRouter');
 const {staffsRouter}=require('./routes/staffsRouter');
+const {talentPoolRouter} = require("./routes/TalentPoolRoute");
 
 
 
@@ -129,6 +130,7 @@ app.get('/activestaffs/all',getActiveStaff);
 app.get('/designations/active',getAllActiveDesignations);
 app.use('/staffs/all',staffsRouter);
 app.use('/intern',internsRouter);
+app.use('/talentpool',talentPoolRouter);
 
 
 
