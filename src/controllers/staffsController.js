@@ -203,7 +203,7 @@ VALUES (@staffName,
         @officialEmail,
         @emergencyContactName,
         @emergencyContactNumber,
-        @status);
+        @status);a
 `;
 
       await request.query(query);

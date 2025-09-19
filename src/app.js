@@ -56,6 +56,7 @@ const {EmailRouter} = require('./routes/EmailManagementRoutes');
 const {internsRouter} = require('./routes/internsRouter');
 const {staffsRouter}=require('./routes/staffsRouter');
 const {talentPoolRouter} = require("./routes/TalentPoolRoute");
+const {assetsRouter} = require("./routes/assetsRouter");
 
 
 
@@ -64,6 +65,8 @@ app.use(express.json());
 app.use(cors({
     origin: process.env.CLIENT_URL,
   exposedHeaders: ['Authorization'],
+   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(logger);
@@ -131,6 +134,7 @@ app.get('/designations/active',getAllActiveDesignations);
 app.use('/staffs/all',staffsRouter);
 app.use('/intern',internsRouter);
 app.use('/talentpool',talentPoolRouter);
+app.use('/assets',assetsRouter);
 
 
 
