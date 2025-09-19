@@ -1,19 +1,22 @@
 const express = require('express');
 const multer = require('multer');
-const { getAllIntern, getInternById, getMetadata, downloadDocument,deleteDocument,uploadDocument,updateinternDetails,toggleInternStatus} = require('../controllers/internsController');
+const { getAllIntern, getInternById, getMetadata, downloadDocument,deleteDocument,uploadDocument,updateinternDetails,toggleInternStatus,createIntern} = require('../controllers/internsController');
 
 const internsRouter = express.Router();
 
 // Use memory storage (you can switch to diskStorage if you want to save files physically)
 const upload = multer({ storage: multer.memoryStorage() });
-// const uploadFields = upload.fields([
-//   { name: "BonafideFileData", maxCount: 1 },
-//   { name: "ResumeFileData", maxCount: 1 },
-//   { name: "PhotoFileData", maxCount: 1 },
-//   { name: "IdProofFileData", maxCount: 1 },
-// ]);
 
-
+internsRouter.post(
+  '/apply',
+  upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'photo', maxCount: 1 },
+    { name: 'idProof', maxCount: 1 },
+    { name: 'bonafide', maxCount: 1 },
+  ]),
+  createIntern
+);
 internsRouter.put('/:id',updateinternDetails);
 internsRouter.get('/all',getAllIntern);
 internsRouter.get('/:id', getInternById);

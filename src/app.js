@@ -71,17 +71,17 @@ app.use(logger);
 connectToDB();
 
 app.use(async (req, res, next) => {
-    if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship')) {
-        try {
-            await authMiddleware(req, res, next);
-        } catch (error) {
-            console.error("Authentication failed:", error);
-            return res.status(401).json({ message: "Authentication failed" });
-        }
-    } else {
-        next();
+  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply')) {
+    try {
+      await authMiddleware(req, res, next);
+    } catch (error) {
+      return res.status(401).json({ message: "Authentication failed" });
     }
+  } else {
+    next();
+  }
 });
+
 
 
 
@@ -120,7 +120,7 @@ app.use('/srb',SRBRouter);
 app.use('/icsr',ICSRRouter);
 app.use('/modules',moduleRouter);
 app.use('/api', EmailRouter);
-app.use('/internship/apply/',internsRouter);
+app.use("/internship", internsRouter);
 
      
 
