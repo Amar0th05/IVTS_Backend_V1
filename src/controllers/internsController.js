@@ -19,17 +19,9 @@ let pool;
   }
 })();
 
-<<<<<<< HEAD
 async function createIntern(req, res) {
   console.log("Creating intern:", req.body);
 
-=======
-// insert intern application data
-
-async function createIntern(req, res) {
-  console.log("Creating intern:", req.body);
-
->>>>>>> 0fb8d949cf1d5828b689bdeedf0afb64cccfe105
   if (!req.files) {
     return res.status(400).json({ message: "File uploads are missing." });
   }
@@ -39,7 +31,6 @@ async function createIntern(req, res) {
     const files = req.files;
 
     const request = pool.request();
-<<<<<<< HEAD
     request.input('FullName', sql.NVarChar, data.fullName);
     request.input('DateOfBirth', sql.Date, data.dob);
     request.input('Gender', sql.NVarChar, data.gender);
@@ -67,77 +58,18 @@ request.input('PhotoFile', sql.VarBinary(sql.MAX), files?.photo?.[0]?.buffer || 
 request.input('IdProofFile', sql.VarBinary(sql.MAX), files?.idProof?.[0]?.buffer || null);
 
 
-=======
-    request.input("FullName", sql.NVarChar, data.fullName);
-    request.input("DateOfBirth", sql.Date, data.dob);
-    request.input("Gender", sql.NVarChar, data.gender);
-    request.input("OtherGender", sql.NVarChar, data.otherGender || null);
-    request.input("MobileNumber", sql.VarChar, data.mobile);
-    request.input("CurrentLocation", sql.NVarChar, data.location);
-    request.input("Email", sql.NVarChar, data.email);
-    request.input("PortfolioLink", sql.NVarChar, data.portfolio || null);
-    request.input("EmergencyContactName", sql.NVarChar, data.emergencyName);
-    request.input(
-      "EmergencyContactRelationship",
-      sql.NVarChar,
-      data.relationship
-    );
-    request.input("EmergencyContactNumber", sql.VarChar, data.emergencyNumber);
-    request.input("CollegeName", sql.NVarChar, data.college);
-    request.input("DegreeProgram", sql.NVarChar, data.degree);
-    request.input(
-      "IsPartOfCurriculum",
-      sql.Bit,
-      data.curriculum === "yes" ? 1 : 0
-    );
-    request.input("FacultySupervisor", sql.NVarChar, data.supervisor || null);
-    // request.input("PreferredStartDate", sql.Date, data.startDate);
-    // request.input("PreferredEndDate", sql.Date, data.endDate);
-    request.input("InternshipMode", sql.NVarChar, data.mode);
-    request.input("HowHeardAboutUs", sql.NVarChar, data.source);
-    request.input("status", sql.Bit, 1);
-
-    // File fields
-    request.input(
-      "BonafideFile",
-      sql.VarBinary(sql.MAX),
-      files?.bonafide?.[0]?.buffer || null
-    );
-    request.input(
-      "ResumeFile",
-      sql.VarBinary(sql.MAX),
-      files?.resume?.[0]?.buffer || null
-    );
-    request.input(
-      "PhotoFile",
-      sql.VarBinary(sql.MAX),
-      files?.photo?.[0]?.buffer || null
-    );
-    request.input(
-      "IdProofFile",
-      sql.VarBinary(sql.MAX),
-      files?.idProof?.[0]?.buffer || null
-    );
-
-    // Run query
->>>>>>> 0fb8d949cf1d5828b689bdeedf0afb64cccfe105
     await request.query(`
       INSERT INTO dbo.internApplicants (
         FullName, DateOfBirth, Gender, OtherGender, MobileNumber, CurrentLocation, Email, PortfolioLink,
         EmergencyContactName, EmergencyContactRelationship, EmergencyContactNumber,
         CollegeName, DegreeProgram, IsPartOfCurriculum, FacultySupervisor,
         PreferredStartDate, PreferredEndDate, InternshipMode, HowHeardAboutUs,
-<<<<<<< HEAD
         BonafideFileData, ResumeFileData, PhotoFileData, IdProofFileData
-=======
-        BonafideFileData, ResumeFileData, PhotoFileData, IdProofFileData, status
->>>>>>> 0fb8d949cf1d5828b689bdeedf0afb64cccfe105
       ) VALUES (
         @FullName, @DateOfBirth, @Gender, @OtherGender, @MobileNumber, @CurrentLocation, @Email, @PortfolioLink,
         @EmergencyContactName, @EmergencyContactRelationship, @EmergencyContactNumber,
         @CollegeName, @DegreeProgram, @IsPartOfCurriculum, @FacultySupervisor,
         @PreferredStartDate, @PreferredEndDate, @InternshipMode, @HowHeardAboutUs,
-<<<<<<< HEAD
         @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile
       )
     `);
@@ -147,239 +79,6 @@ request.input('IdProofFile', sql.VarBinary(sql.MAX), files?.idProof?.[0]?.buffer
   } catch (err) {
     console.error('SERVER ERROR:', err);
     res.status(500).json({ message: 'Failed to submit application.', error: err.message });
-=======
-        @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile, @status
-      )
-    `);
-
-    const internData = {
-      FullName: data.fullName,
-      Email: data.email,
-      MobileNumber: data.mobile,
-      CollegeName: data.college,
-      DegreeProgram: data.degree,
-      PreferredStartDate: data.startDate,
-      PreferredEndDate: data.endDate,
-    };
-
-    await sendVendorCreated(
-      data.email,
-      "amarnath.t@ntcpwc.iitm.ac.in",
-      internData
-    );
-
-    console.log(" sendVendorCreated function called successfully!");
-
-    return res.status(200).json({
-      message: "Application Submitted Successfully and mail sent!",
-    });
-  } catch (err) {
-    console.error("SERVER ERROR:", err);
-    if (!res.headersSent) {
-      return res
-        .status(500)
-        .json({ message: "Failed to submit application.", error: err.message });
-    }
-  }
-}
-
-async function sendVendorCreated(To, cc, data) {
-  console.log("Sending intern email for:", data.FullName);
-
-  const mailOptions = {
-    from: process.env.EMAIL_SENDER,
-    to: To,
-    cc: cc,
-    subject: `New Internship Registration – ${data.FullName}`,
-    html: `
-<p>Dear HR,</p>
-<p>A new internship registration has been submitted. Please find the details below:</p>
-
-<p><b>Intern Details:</b></p>
-<ul>
-  <li><b>Name:</b> ${data.FullName}</li>
-  <li><b>Email:</b> ${data.Email}</li>
-  <li><b>Phone:</b> ${data.MobileNumber}</li>
-  <li><b>University/College:</b> ${data.CollegeName}</li>
-  <li><b>Course/Program:</b> ${data.DegreeProgram}</li>
-  <li><b>Expected Start Date:</b> ${data.PreferredStartDate}</li>
-  <li><b>Expected End Date:</b> ${data.PreferredEndDate}</li>
-</ul>
-
-<p>Please review the application and take necessary action.</p>
-
-<p>Best regards,<br>
-WorkSphere <br>
-NTCPWC IITM</p>
-`,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully!");
-    return true;
-  } catch (err) {
-    console.error("Email sending failed:", err);
-    return false;
-  }
-}
-
-async function createIntern(req, res) {
-  console.log("Creating intern:", req.body);
-
-  if (!req.files) {
-    return res.status(400).json({ message: "File uploads are missing." });
-  }
-
-  try {
-    const data = req.body;
-    const files = req.files;
-
-    const request = pool.request();
-    request.input("FullName", sql.NVarChar, data.fullName);
-    request.input("DateOfBirth", sql.Date, data.dob);
-    request.input("Gender", sql.NVarChar, data.gender);
-    request.input("OtherGender", sql.NVarChar, data.otherGender || null);
-    request.input("MobileNumber", sql.VarChar, data.mobile);
-    request.input("CurrentLocation", sql.NVarChar, data.location);
-    request.input("Email", sql.NVarChar, data.email);
-    request.input("PortfolioLink", sql.NVarChar, data.portfolio || null);
-    request.input("EmergencyContactName", sql.NVarChar, data.emergencyName);
-    request.input(
-      "EmergencyContactRelationship",
-      sql.NVarChar,
-      data.relationship
-    );
-    request.input("EmergencyContactNumber", sql.VarChar, data.emergencyNumber);
-    request.input("CollegeName", sql.NVarChar, data.college);
-    request.input("DegreeProgram", sql.NVarChar, data.degree);
-    request.input(
-      "IsPartOfCurriculum",
-      sql.Bit,
-      data.curriculum === "yes" ? 1 : 0
-    );
-    request.input("FacultySupervisor", sql.NVarChar, data.supervisor || null);
-    request.input("PreferredStartDate", sql.Date, data.startDate);
-    request.input("PreferredEndDate", sql.Date, data.endDate);
-    request.input("InternshipMode", sql.NVarChar, data.mode);
-    request.input("HowHeardAboutUs", sql.NVarChar, data.source);
-    request.input("status", sql.Bit, 1);
-
-    // File fields
-    request.input(
-      "BonafideFile",
-      sql.VarBinary(sql.MAX),
-      files?.bonafide?.[0]?.buffer || null
-    );
-    request.input(
-      "ResumeFile",
-      sql.VarBinary(sql.MAX),
-      files?.resume?.[0]?.buffer || null
-    );
-    request.input(
-      "PhotoFile",
-      sql.VarBinary(sql.MAX),
-      files?.photo?.[0]?.buffer || null
-    );
-    request.input(
-      "IdProofFile",
-      sql.VarBinary(sql.MAX),
-      files?.idProof?.[0]?.buffer || null
-    );
-
-    // Run query
-    await request.query(`
-      INSERT INTO dbo.internApplicants (
-        FullName, DateOfBirth, Gender, OtherGender, MobileNumber, CurrentLocation, Email, PortfolioLink,
-        EmergencyContactName, EmergencyContactRelationship, EmergencyContactNumber,
-        CollegeName, DegreeProgram, IsPartOfCurriculum, FacultySupervisor,
-        PreferredStartDate, PreferredEndDate, InternshipMode, HowHeardAboutUs,
-        BonafideFileData, ResumeFileData, PhotoFileData, IdProofFileData, status
-      ) VALUES (
-        @FullName, @DateOfBirth, @Gender, @OtherGender, @MobileNumber, @CurrentLocation, @Email, @PortfolioLink,
-        @EmergencyContactName, @EmergencyContactRelationship, @EmergencyContactNumber,
-        @CollegeName, @DegreeProgram, @IsPartOfCurriculum, @FacultySupervisor,
-        @PreferredStartDate, @PreferredEndDate, @InternshipMode, @HowHeardAboutUs,
-        @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile, @status
-      )
-    `);
-
-    // Send mail to HR
-    await sendHRMail(
-      "vasan.gk@ntcpwc.iitm.ac.in",
-      
-      data
-    );
-
-    // Send confirmation mail to Intern
-    await sendInternMail(data.email, data.fullName);
-
-    console.log("✅ Both HR and Intern mails sent successfully!");
-
-    return res.status(200).json({
-      message: "Application Submitted Successfully and mails sent!",
-    });
-  } catch (err) {
-    console.error("SERVER ERROR:", err);
-    if (!res.headersSent) {
-      return res
-        .status(500)
-        .json({ message: "Failed to submit application.", error: err.message });
-    }
-  }
-}
-
-async function sendHRMail(To, data) {
-  const mailOptions = {
-    from: process.env.EMAIL_SENDER,
-    to: To,
-    subject: `New Internship Registration – ${data.fullName}`,
-    html: `
-      <p>Dear HR,</p>
-      <p>A new internship registration has been submitted. Please find the details below:</p>
-      <ul>
-        <li><b>Name:</b> ${data.fullName}</li>
-        <li><b>Email:</b> ${data.email}</li>
-        <li><b>Phone:</b> ${data.mobile}</li>
-        <li><b>University/College:</b> ${data.college}</li>
-        <li><b>Course/Program:</b> ${data.degree}</li>
-      
-      </ul>
-      <p>Please review the application and take necessary action.</p>
-      <p>Best regards,<br/>WorkSphere<br/>NTCPWC IITM</p>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (err) {
-    console.error("❌ Error sending HR mail:", err);
-    return false;
-  }
-}
-
-async function sendInternMail(to, name) {
-  const mailOptions = {
-    from: process.env.EMAIL_SENDER,
-    to: to,
-    subject: "Internship Registration Successful – NTCPWC, IITM",
-    html: `
-      <p>Dear ${name},</p>
-      <p>Congratulations! Your internship registration with <b>NTCPWC, IITM</b> has been successfully submitted.</p>
-      <p>Our HR team will review your application and get in touch with you shortly regarding the next steps.</p>
-      <p>We are excited to have you explore opportunities with NTCPWC and look forward to your contributions.</p>
-      <p>Best regards,<br/>Team NTCPWC</p>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (err) {
-    console.error("❌ Error sending Intern mail:", err);
-    return false;
->>>>>>> 0fb8d949cf1d5828b689bdeedf0afb64cccfe105
   }
 }
 
@@ -894,7 +593,6 @@ module.exports = {
   toggleInternStatus,
   createIntern,
 };
-<<<<<<< HEAD
 
 
 
@@ -902,5 +600,3 @@ module.exports = { getAllIntern, getInternById ,getMetadata ,downloadDocument,de
 
 
 
-=======
->>>>>>> 0fb8d949cf1d5828b689bdeedf0afb64cccfe105
