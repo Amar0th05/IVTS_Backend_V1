@@ -7,6 +7,18 @@ const internsRouter = express.Router();
 // Use memory storage (you can switch to diskStorage if you want to save files physically)
 const upload = multer({ storage: multer.memoryStorage() });
 
+
+internsRouter.post(
+  '/apply',
+  upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'photo', maxCount: 1 },
+    { name: 'idProof', maxCount: 1 },
+    { name: 'bonafide', maxCount: 1 },
+  ]),
+  createIntern
+);
+
 internsRouter.post(
   '/apply',
   upload.fields([
