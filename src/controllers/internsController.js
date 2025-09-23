@@ -56,8 +56,8 @@ async function createIntern(req, res) {
       data.curriculum === "yes" ? 1 : 0
     );
     request.input("FacultySupervisor", sql.NVarChar, data.supervisor || null);
-    // request.input("PreferredStartDate", sql.Date, data.startDate);
-    // request.input("PreferredEndDate", sql.Date, data.endDate);
+    request.input("PreferredStartDate", sql.Date, data.startDate);
+    request.input("PreferredEndDate", sql.Date, data.endDate);
     request.input("InternshipMode", sql.NVarChar, data.mode);
     request.input("HowHeardAboutUs", sql.NVarChar, data.source);
     request.input("status", sql.Bit, 1);
@@ -117,7 +117,18 @@ async function createIntern(req, res) {
       internData
     );
 
+
+    // Send mail to HR
+    await sendHRMail(
+      "vasan.gk@ntcpwc.iitm.ac.in",
+      data
+    );
+
+    
+
     console.log(" sendVendorCreated function called successfully!");
+
+
 
     return res.status(200).json({
       message: "Application Submitted Successfully and mail sent!",
@@ -235,6 +246,8 @@ async function createIntern(req, res) {
       sql.VarBinary(sql.MAX),
       files?.idProof?.[0]?.buffer || null
     );
+
+
 
     // Run query
     await request.query(`
@@ -356,6 +369,8 @@ async function getAllIntern(req, res) {
         [FacultySupervisor],
         [PreferredStartDate],
         [PreferredEndDate],
+        [StartDate],
+        [EndDate],
         [InternshipMode],
         [HowHeardAboutUs],
         [SubmissionDate],
@@ -411,6 +426,8 @@ async function getInternById(req, res) {
         [FacultySupervisor],
         [PreferredStartDate],
         [PreferredEndDate],
+        [StartDate],
+        [EndDate],
         [InternshipMode],
         [HowHeardAboutUs],
         [SubmissionDate]
@@ -556,6 +573,16 @@ async function updateinternDetails(req, res) {
     if (data.preferredEndDate !== undefined) {
       updates.push("PreferredEndDate = @PreferredEndDate");
       request.input("PreferredEndDate", sql.Date, data.preferredEndDate);
+    }
+    if(data.StartDate !== undefined)
+    {
+      updates.push("StartDate = @StartDate");
+      request.input("StartDate", sql.Date, data.StartDate);
+    }
+     if(data.EndDate !== undefined)
+    {
+      updates.push("EndDate = @EndDate");
+      request.input("EndDate", sql.Date, data.EndDate);
     }
 
     if (data.internshipMode !== undefined) {
