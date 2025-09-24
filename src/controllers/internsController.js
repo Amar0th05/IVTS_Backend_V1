@@ -19,6 +19,8 @@ let pool;
   }
 })();
 
+// insert intern application data
+
 async function createIntern(req, res) {
   console.log("Creating intern:", req.body);
 
@@ -247,28 +249,98 @@ async function createIntern(req, res) {
 
 
 
-
+    // Run query
     await request.query(`
       INSERT INTO dbo.internApplicants (
         FullName, DateOfBirth, Gender, OtherGender, MobileNumber, CurrentLocation, Email, PortfolioLink,
         EmergencyContactName, EmergencyContactRelationship, EmergencyContactNumber,
         CollegeName, DegreeProgram, IsPartOfCurriculum, FacultySupervisor,
         PreferredStartDate, PreferredEndDate, InternshipMode, HowHeardAboutUs,
-        BonafideFileData, ResumeFileData, PhotoFileData, IdProofFileData
+        BonafideFileData, ResumeFileData, PhotoFileData, IdProofFileData, status
       ) VALUES (
         @FullName, @DateOfBirth, @Gender, @OtherGender, @MobileNumber, @CurrentLocation, @Email, @PortfolioLink,
         @EmergencyContactName, @EmergencyContactRelationship, @EmergencyContactNumber,
         @CollegeName, @DegreeProgram, @IsPartOfCurriculum, @FacultySupervisor,
         @PreferredStartDate, @PreferredEndDate, @InternshipMode, @HowHeardAboutUs,
-        @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile
+        @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile, @status
       )
     `);
 
-    res.status(201).json({ message: 'Application submitted successfully!' });
+    // Send mail to HR
+    await sendHRMail(
+      "vasan.gk@ntcpwc.iitm.ac.in",
+      
+      data
+    );
 
+    // Send confirmation mail to Intern
+    await sendInternMail(data.email, data.fullName);
+
+    console.log("✅ Both HR and Intern mails sent successfully!");
+
+    return res.status(200).json({
+      message: "Application Submitted Successfully and mails sent!",
+    });
   } catch (err) {
-    console.error('SERVER ERROR:', err);
-    res.status(500).json({ message: 'Failed to submit application.', error: err.message });
+    console.error("SERVER ERROR:", err);
+    if (!res.headersSent) {
+      return res
+        .status(500)
+        .json({ message: "Failed to submit application.", error: err.message });
+    }
+  }
+}
+
+async function sendHRMail(To, data) {
+  const mailOptions = {
+    from: process.env.EMAIL_SENDER,
+    to: To,
+    subject: `New Internship Registration – ${data.fullName}`,
+    html: `
+      <p>Dear HR,</p>
+      <p>A new internship registration has been submitted. Please find the details below:</p>
+      <ul>
+        <li><b>Name:</b> ${data.fullName}</li>
+        <li><b>Email:</b> ${data.email}</li>
+        <li><b>Phone:</b> ${data.mobile}</li>
+        <li><b>University/College:</b> ${data.college}</li>
+        <li><b>Course/Program:</b> ${data.degree}</li>
+      
+      </ul>
+      <p>Please review the application and take necessary action.</p>
+      <p>Best regards,<br/>WorkSphere<br/>NTCPWC IITM</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (err) {
+    console.error("❌ Error sending HR mail:", err);
+    return false;
+  }
+}
+
+async function sendInternMail(to, name) {
+  const mailOptions = {
+    from: process.env.EMAIL_SENDER,
+    to: to,
+    subject: "Internship Registration Successful – NTCPWC, IITM",
+    html: `
+      <p>Dear ${name},</p>
+      <p>Congratulations! Your internship registration with <b>NTCPWC, IITM</b> has been successfully submitted.</p>
+      <p>Our HR team will review your application and get in touch with you shortly regarding the next steps.</p>
+      <p>We are excited to have you explore opportunities with NTCPWC and look forward to your contributions.</p>
+      <p>Best regards,<br/>Team NTCPWC</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (err) {
+    console.error("❌ Error sending Intern mail:", err);
+    return false;
   }
 }
 
@@ -797,10 +869,3 @@ module.exports = {
   toggleInternStatus,
   createIntern,
 };
-
-
-
-module.exports = { getAllIntern, getInternById ,getMetadata ,downloadDocument,deleteDocument,uploadDocument,updateinternDetails,toggleInternStatus,createIntern};
-
-
-
