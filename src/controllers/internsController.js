@@ -376,7 +376,7 @@ async function getAllIntern(req, res) {
         [SubmissionDate],
         [status]
         -- do not select VARBINARY here to avoid huge payload
-      FROM [IVTS_MANAGEMENT].[dbo].[internApplicants]
+      FROM dbo.internApplicants
     `;
 
     const result = await request.query(query);
@@ -432,7 +432,7 @@ async function getInternById(req, res) {
         [HowHeardAboutUs],
         [SubmissionDate]
         -- do not select VARBINARY here to avoid huge payload
-      FROM [IVTS_MANAGEMENT].[dbo].[internApplicants]
+      FROM dbo.internApplicants
       WHERE Id = @interId;
     `;
 
