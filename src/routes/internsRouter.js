@@ -18,17 +18,6 @@ internsRouter.post(
   ]),
   createIntern
 );
-
-internsRouter.post(
-  '/apply',
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'photo', maxCount: 1 },
-    { name: 'idProof', maxCount: 1 },
-    { name: 'bonafide', maxCount: 1 },
-  ]),
-  createIntern
-);
 internsRouter.put('/:id',updateinternDetails);
 internsRouter.get('/all',getAllIntern);
 internsRouter.get('/:id', getInternById);

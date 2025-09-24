@@ -3,7 +3,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const logFilePath = path.join(__dirname, 'server.log');
+const logFilePath = path.join("logs", 'server.log');
 
 const logger = (req, res, next) => {
 
