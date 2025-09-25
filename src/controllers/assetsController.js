@@ -422,6 +422,8 @@ async function getAllDesktop(req, res) {
     const query = `
       SELECT
         [Sl_No] AS slNo,
+     [Asset_ID] AS assetId,
+      [Category] As category,
         [Model_No] AS modelNo,
         [Serial_No] AS serialNo,
         [Processor_Type] AS processorType,
@@ -449,7 +451,7 @@ async function getAllDesktop(req, res) {
 
     if (result.recordset.length > 0) {
       console.log("assets",result.recordset)
-      return res.json({ laptops: result.recordset });
+      return res.json({ desktops: result.recordset });
     } else {
       return res.status(404).json({ message: "No asset records found" });
     }
@@ -580,6 +582,81 @@ async function toggleDesktopStatus(req, res) {
         console.error("Error toggling staff status:", err);
         res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
+}
+
+async function updateDesktops(req, res) {
+  const { data } = req.body;
+  console.log("Desktop data received in backend:", data);
+
+  if (!data || !data.Asset_ID) {
+    return res.status(400).json({ message: "No assetId or data provided" });
+  }
+
+  let storage = Number(data.HDD_GB_TB) || 0;   // ensure number
+  let unit = data.storageUnit || "GB";         // default GB
+  let GB = unit === "TB" ? storage * 1024 : storage;
+
+  try {
+    const request = pool.request();
+    console.log("assetId",data.Asset_ID);
+
+    // Bind parameters
+    request.input('assetId', sql.NVarChar, data.Asset_ID);
+    request.input('category', sql.NVarChar, "Desktop");
+    request.input('modelNo', sql.NVarChar, data.Model_No);
+    request.input('serialNo', sql.NVarChar, data.Serial_No);
+    request.input('processorType', sql.NVarChar, data.Processor_Type);
+    request.input('ram', sql.NVarChar, data.RAM_GB);
+    request.input('storage', sql.Int, data.GB);
+    request.input('osType', sql.NVarChar, data.OS_Type);
+    request.input('ipAddress', sql.NVarChar, data.IP_Address);
+    request.input('macAddress', sql.NVarChar, data.MAC_Address);
+    request.input('projectNo', sql.NVarChar, data.Project_No);
+    request.input('poNo', sql.NVarChar, data.PO_No);
+    request.input('poDate', sql.Date, data.PO_Date);
+    request.input('vendorName', sql.NVarChar, data.Vendor_Name);
+    request.input('invoiceNo', sql.NVarChar, data.Invoice_No);
+    request.input('invoiceDate', sql.Date, data.Invoice_Date);
+    request.input('srbNo', sql.NVarChar, data.SRB);
+    request.input('userName', sql.NVarChar, data.userName);
+    request.input('dept', sql.NVarChar, data.Dept);
+    request.input('remarks', sql.NVarChar, data.Remarks);
+
+    const query = `
+      UPDATE assets
+      SET
+        Category = @category,
+        Model_No = @modelNo,
+        Serial_No = @serialNo,
+        Processor_Type = @processorType,
+        RAM_GB = @ram,
+        Storage_GB_TB = @storage,
+        OS_Type = @osType,
+        IP_Address = @ipAddress,
+        MAC_Address = @macAddress,
+        Project_No = @projectNo,
+        PO_No = @poNo,
+        PO_Date = @poDate,
+        Vendor_Name = @vendorName,
+        Invoice_No = @invoiceNo,
+        Invoice_Date = @invoiceDate,
+        SRB_No = @srbNo,
+        User_Name = @userName,
+        Dept = @dept,
+        Remarks = @remarks
+      WHERE Asset_ID = @assetId
+    `;
+    const result = await request.query(query);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ message: "Asset not found" });
+    }
+
+    res.json({ message: "Asset updated successfully" });
+  } catch (err) {
+    console.error("Error updating asset:", err);
+    res.status(500).json({ message: err?.message || "Internal Server Error" });
+  }
 }
 
 // server
@@ -802,4 +879,4 @@ async function updateServer(req, res) {
   }
 }
 
-module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus};
+module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,updateDesktops};

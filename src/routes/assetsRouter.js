@@ -1,4 +1,4 @@
-const {getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus}=require('../controllers/assetsController');
+const {getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus,updateDesktops}=require('../controllers/assetsController');
 const express=require('express');
 const assetsRouter=express.Router();
 
@@ -13,6 +13,8 @@ assetsRouter.put('/Laptops/update',updateLaptops);
 assetsRouter.get('/Desktops',getAllDesktop);
 assetsRouter.post('/Desktops/add',addDesktop);
 assetsRouter.put('/Desktops/status/:id',toggleDesktopStatus);
+assetsRouter.put('/Desktops/update',updateDesktops);
+
 // server
 assetsRouter.get('/Servers',getAllServer);
 assetsRouter.post('/Servers/add',addServer);
