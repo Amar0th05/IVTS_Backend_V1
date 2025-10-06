@@ -688,7 +688,7 @@ const allowedDocColumns = [
   'TenthCertificateFile', 'TwelfthCertificateFile', 'GMDSSCertificateFile', 'IALACertificateFile'
 ];
 
-async function uploadDocument(req,res){
+async function uploadDocument(req, res) {
   const { staffId, docName } = req.params;
 
   if (!req.file) {
@@ -706,8 +706,42 @@ async function uploadDocument(req,res){
     request.input('staffId', sql.NVarChar, staffId);
     request.input('fileData', sql.VarBinary(sql.MAX), req.file.buffer);
 
-    // Dynamic column update query (column name can’t be parameterized)
-    const query = `UPDATE dbo.StaffDocuments SET ${docName} = @fileData WHERE StaffID = @staffId`;
+    // Check if StaffID exists
+    const checkResult = await request.query(
+      "SELECT StaffID FROM dbo.StaffDocuments WHERE StaffID = @staffId"
+    );
+
+    let query;
+
+    if (checkResult.recordset.length > 0) {
+      // Record exists → Update only the given column
+      query = `UPDATE dbo.StaffDocuments SET ${docName} = @fileData WHERE StaffID = @staffId`;
+    } else {
+      // Record doesn't exist → Insert new row with only one file column filled
+      const allColumns = [
+        "AadhaarFile",
+        "PANFile",
+        "AcademicCertificateFile",
+        "IDCardFile",
+        "TenthCertificateFile",
+        "TwelfthCertificateFile",
+        "GMDSSCertificateFile",
+        "IALACertificateFile",
+      ];
+
+      const columns = ["StaffID", ...allColumns];
+      const values = columns.map((col) =>
+        col === "StaffID"
+          ? "@staffId"
+          : col === docName
+          ? "@fileData"
+          : "NULL"
+      );
+
+      query = `INSERT INTO dbo.StaffDocuments (${columns.join(
+        ", "
+      )}) VALUES (${values.join(", ")})`;
+    }
 
     const result = await request.query(query);
 
