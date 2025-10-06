@@ -48,7 +48,7 @@ async function getAllAssets(req, res) {
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[assets];
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets];
     `;
 
     const result = await request.query(query);
@@ -109,7 +109,7 @@ async function getAssets(req, res) {
         [Remarks] AS remarks,
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt
-      FROM [IVTS_MANAGEMENT].[dbo].[assets] WHERE Asset_ID=@id;
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets] WHERE Asset_ID=@id;
     `;
 
     
@@ -184,7 +184,7 @@ async function getAllLaptops(req, res) {
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[assets]
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
       where Category='laptop';
     `;
 
@@ -217,9 +217,10 @@ async function addLaptops(req, res) {
     return res.status(400).json({ message: "No data provided" });
   }
 
-let storage = Number(data.HDD_GB_TB) || 0;   // ensure number
-let unit = data.storageUnit || "GB";         // default GB
-let GB = unit === "TB" ? storage * 1024 : storage;
+let storage = data.HDD_GB_TB;           // e.g. 1
+let unit = data.storageUnit || "GB";    // e.g. TB (or fallback to GB)
+
+let GB = `${storage} ${unit}`;
 
 
   try {
@@ -232,7 +233,7 @@ let GB = unit === "TB" ? storage * 1024 : storage;
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('processorType', sql.NVarChar, data.Processor_Type);
     request.input('ram', sql.NVarChar, data.RAM_GB);
-    request.input('storage', sql.Int, GB);
+    request.input('storage', sql.NVarChar, GB);
     request.input('graphics', sql.NVarChar, data.Graphics);
     request.input('osType', sql.NVarChar, data.OS_Type);
     request.input('hostName', sql.NVarChar, data.Host_Name);
@@ -315,10 +316,6 @@ async function updateLaptops(req, res) {
     return res.status(400).json({ message: "No assetId or data provided" });
   }
 
-  let storage = Number(data.HDD_GB_TB) || 0;   // ensure number
-  let unit = data.storageUnit || "GB";         // default GB
-  let GB = unit === "TB" ? storage * 1024 : storage;
-
   try {
     const request = pool.request();
     console.log("assetId",data.Asset_ID);
@@ -330,7 +327,7 @@ async function updateLaptops(req, res) {
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('processorType', sql.NVarChar, data.Processor_Type);
     request.input('ram', sql.NVarChar, data.RAM_GB);
-    request.input('storage', sql.Int, GB);
+    request.input('storage', sql.NVarChar, data.storage);
     request.input('graphics', sql.NVarChar, data.Graphics);
     request.input('osType', sql.NVarChar, data.OS_Type);
     request.input('hostName', sql.NVarChar, data.Host_Name);
@@ -348,7 +345,7 @@ async function updateLaptops(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      UPDATE assets
+      UPDATE Assets
       SET
         Category = @category,
         Model_No = @modelNo,
@@ -443,8 +440,8 @@ async function getAllDesktop(req, res) {
         [Dept] AS dept,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[assets]
-      WHERE Category='Desktops and Monitors';
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      WHERE Category='Desktop & Monitor';
     `;
 
     const result = await request.query(query);
@@ -472,9 +469,13 @@ async function addDesktop(req, res) {
     return res.status(400).json({ message: "No data provided" });
   }
 
-let storage = Number(data.HDD_GB_TB) || 0;   // ensure number
-let unit = data.storageUnit || "GB";         // default GB
-let GB = unit === "TB" ? storage * 1024 : storage;
+let storage = data.HDD_GB_TB;           // e.g. 1
+let unit = data.storageUnit || "GB";    // e.g. TB (or fallback to GB)
+let type = data.storageType || "SDD"; 
+
+
+let GB = `${storage} ${unit} ${type}`;
+
 
 
   try {
@@ -482,12 +483,12 @@ let GB = unit === "TB" ? storage * 1024 : storage;
 
     // Map inputs to match your `assets` table
     // request.input('assetId', sql.NVarChar, data.assetId);
-    request.input('category', sql.NVarChar, "Desktops and Monitors");
+    request.input('category', sql.NVarChar, "Desktop & Monitor");
     request.input('modelNo', sql.NVarChar, data.Model_No);
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('processorType', sql.NVarChar, data.Processor_Type);
     request.input('ram', sql.NVarChar, data.RAM_GB);
-    request.input('storage', sql.Int, GB);
+    request.input('storage', sql.NVarChar, GB);
     request.input('osType', sql.NVarChar, data.OS_Type);
     request.input('ipAddress', sql.NVarChar, data.IP_Address);
     request.input('macAddress', sql.NVarChar, data.MAC_Address);
@@ -495,10 +496,10 @@ let GB = unit === "TB" ? storage * 1024 : storage;
     // request.input('remarkConfig', sql.NVarChar, data.remarkConfig);
     request.input('projectNo', sql.NVarChar, data.Project_No);
     request.input('poNo', sql.NVarChar, data.PO_No);
-    request.input('poDate', sql.Date, data.PO_Date);
+    request.input('poDate', sql.Date, Date(data.PO_Date));
     request.input('vendorName', sql.NVarChar, data.Vendor_Name);
     request.input('invoiceNo', sql.NVarChar, data.Invoice_No);
-    request.input('invoiceDate', sql.Date, data.Invoice_Date);
+    request.input('invoiceDate', sql.Date, Date(data.Invoice_Date));
     request.input('srbNo', sql.NVarChar, data.SRB);
     request.input('userName', sql.NVarChar, data.userName);
     request.input('dept', sql.NVarChar, data.Dept);
@@ -589,9 +590,6 @@ async function updateDesktops(req, res) {
     return res.status(400).json({ message: "No assetId or data provided" });
   }
 
-  let storage = Number(data.HDD_GB_TB) || 0;   // ensure number
-  let unit = data.storageUnit || "GB";         // default GB
-  let GB = unit === "TB" ? storage * 1024 : storage;
 
   try {
     const request = pool.request();
@@ -603,7 +601,7 @@ async function updateDesktops(req, res) {
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('processorType', sql.NVarChar, data.Processor_Type);
     request.input('ram', sql.NVarChar, data.RAM_GB);
-    request.input('storage', sql.Int, GB);
+    request.input('storage', sql.NVarChar, data.storage);
     request.input('osType', sql.NVarChar, data.OS_Type);
     request.input('ipAddress', sql.NVarChar, data.IP_Address);
     request.input('macAddress', sql.NVarChar, data.MAC_Address);
@@ -682,8 +680,8 @@ async function getAllServer(req, res) {
         [User_Name] AS userName,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[assets]
-      WHERE Category='Server And Storage';
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      WHERE Category='Server & Storage';
     `;
 
     const result = await request.query(query);
@@ -719,9 +717,10 @@ async function addServer(req, res) {
 
     // Map inputs to match your `assets` table
     // request.input('assetId', sql.NVarChar, data.assetId);
-    request.input('category', sql.NVarChar, "Server And Storage");
+    request.input('category', sql.NVarChar, "Server & Storage");
     request.input('modelNo', sql.NVarChar, data.Model_No);
     request.input('serialNo', sql.NVarChar, data.Serial_No);
+    request.input('processorType', sql.NVarChar, data.Processor_Type);
     request.input('ipAddress', sql.NVarChar, data.IP_Address);
     request.input('macAddress', sql.NVarChar, data.MAC_Address);
     request.input('port', sql.NVarChar, data.Port );
@@ -742,6 +741,7 @@ async function addServer(req, res) {
         Category,
         Model_No,
         Serial_No,
+        processorType,
         IP_Address,
         MAC_Address,
         Port,
@@ -761,6 +761,7 @@ async function addServer(req, res) {
         @category,
         @modelNo,
         @serialNo,
+        @processorType,
         @ipAddress,
         @macAddress,
         @port,
@@ -900,8 +901,8 @@ async function getAllPrinter(req, res) {
         [User_Name] AS userName,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[assets]
-      WHERE Category='Printer and Scanners';
+      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      WHERE Category='Printer & Scanner';
     `;
 
     const result = await request.query(query);
@@ -938,7 +939,7 @@ async function addPrinter(req, res) {
 
     // Map inputs to match your `assets` table
     // request.input('assetId', sql.NVarChar, data.assetId);
-    request.input('category', sql.NVarChar, "Printer and Scanners");
+    request.input('category', sql.NVarChar, "Printer & Scanner");
     request.input('modelNo', sql.NVarChar, data.Model_No);
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('ipAddress', sql.NVarChar, data.IP_Address);
@@ -1035,7 +1036,6 @@ async function updatePrinter(req, res) {
 
     // Bind parameters
     request.input('assetId', sql.NVarChar, data.Asset_ID);
-    request.input('category', sql.NVarChar, "Printer and Scanners");
     request.input('modelNo', sql.NVarChar, data.Model_No);
     request.input('serialNo', sql.NVarChar, data.Serial_No);
     request.input('ipAddress', sql.NVarChar, data.IP_Address);
