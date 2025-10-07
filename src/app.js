@@ -57,6 +57,8 @@ const {internsRouter} = require('./routes/internsRouter');
 const {staffsRouter}=require('./routes/staffsRouter');
 const {talentPoolRouter} = require("./routes/TalentPoolRoute");
 const {assetsRouter} = require("./routes/assetsRouter");
+const {InternLeaveRouter}= require("./routes/InternLeaveRouter");
+
 
 
 
@@ -74,7 +76,7 @@ app.use(logger);
 connectToDB();
 
 app.use(async (req, res, next) => {
-  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply')) {
+  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/internLeave')) {
     try {
       await authMiddleware(req, res, next);
     } catch (error) {
@@ -135,6 +137,8 @@ app.use('/staffs/all',staffsRouter);
 app.use('/intern',internsRouter);
 app.use('/talentpool',talentPoolRouter);
 app.use('/assets',assetsRouter);
+//Intern Leave
+app.use('/internLeave',InternLeaveRouter);
 
 
 

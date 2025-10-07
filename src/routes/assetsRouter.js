@@ -1,4 +1,4 @@
-const {getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus,updateDesktops,getAllPrinter,addPrinter,togglePrinterStatus,updatePrinter}=require('../controllers/assetsController');
+const {getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus,updateDesktops,getAllPrinter,addPrinter,togglePrinterStatus,updatePrinter,downloadBarCode}=require('../controllers/assetsController');
 const express=require('express');
 const assetsRouter=express.Router();
 
@@ -31,6 +31,10 @@ assetsRouter.put('/Printer/update',updatePrinter);
 
 assetsRouter.get('/getstaff',getStaff);
 assetsRouter.get('/:id',getAssets);
+
+// download bar code
+
+assetsRouter.get('/barcode/:assetId',downloadBarCode);
 
 
 

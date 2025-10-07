@@ -1,4 +1,5 @@
 const {sql,getPool} = require('../config/dbconfig');
+const bwipjs = require('bwip-js');
 let pool;
 
 (async ()=>{
@@ -48,7 +49,7 @@ async function getAllAssets(req, res) {
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets];
+      FROM dbo.Assets;
     `;
 
     const result = await request.query(query);
@@ -109,7 +110,7 @@ async function getAssets(req, res) {
         [Remarks] AS remarks,
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets] WHERE Asset_ID=@id;
+      FROM dbo.Assets WHERE Asset_ID=@id;
     `;
 
     
@@ -184,7 +185,7 @@ async function getAllLaptops(req, res) {
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      FROM dbo.Assets
       where Category='laptop';
     `;
 
@@ -254,7 +255,7 @@ let GB = `${storage} ${unit} ${type}`;
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      INSERT INTO assets (
+      INSERT INTO dbo.Assets (
         Category,
         Model_No,
         Serial_No,
@@ -394,7 +395,7 @@ async function toggleLaptopStatus(req, res) {
         request.input("id", sql.NVarChar(20), id);
 
         const result = await request.query(`
-            UPDATE assets
+            UPDATE dbo.Assets
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
             WHERE Asset_ID = @id
         `);
@@ -441,7 +442,7 @@ async function getAllDesktop(req, res) {
         [Dept] AS dept,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      FROM dbo.Assets
       WHERE Category='Desktop & Monitor';
     `;
 
@@ -507,7 +508,7 @@ let GB = `${storage} ${unit} ${type}`;
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      INSERT INTO assets (
+      INSERT INTO dbo.Assets (
         Category,
         Model_No,
         Serial_No,
@@ -567,7 +568,7 @@ async function toggleDesktopStatus(req, res) {
         request.input("id", sql.NVarChar(20), id);
 
         const result = await request.query(`
-            UPDATE assets
+            UPDATE dbo.Assets
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
             WHERE Asset_ID = @id
         `);
@@ -618,7 +619,7 @@ async function updateDesktops(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      UPDATE assets
+      UPDATE dbo.Assets
       SET
         Model_No = @modelNo,
         Serial_No = @serialNo,
@@ -681,7 +682,7 @@ async function getAllServer(req, res) {
         [User_Name] AS userName,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      FROM dbo.Assets
       WHERE Category='Server & Storage';
     `;
 
@@ -738,7 +739,7 @@ async function addServer(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      INSERT INTO assets (
+      INSERT INTO dbo.Assets (
         Category,
         Model_No,
         Serial_No,
@@ -796,7 +797,7 @@ async function toggleServerStatus(req, res) {
         request.input("id", sql.NVarChar(20), id);
 
         const result = await request.query(`
-            UPDATE assets
+            UPDATE dbo.Assets
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
             WHERE Asset_ID = @id
         `);
@@ -843,7 +844,7 @@ async function updateServer(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      UPDATE assets
+      UPDATE dbo.Assets
       SET
         Model_No = @modelNo,
         Serial_No = @serialNo,
@@ -902,7 +903,7 @@ async function getAllPrinter(req, res) {
         [User_Name] AS userName,
         [Remarks] AS remarks,
         [status] AS status
-      FROM [IVTS_MANAGEMENT].[dbo].[Assets]
+      FROM dbo.Assets
       WHERE Category='Printer & Scanner';
     `;
 
@@ -956,7 +957,7 @@ async function addPrinter(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      INSERT INTO assets (
+      INSERT INTO dbo.Assets (
         Category,
         Model_No,
         Serial_No,
@@ -1006,7 +1007,7 @@ async function togglePrinterStatus(req, res) {
         request.input("id", sql.NVarChar(20), id);
 
         const result = await request.query(`
-            UPDATE assets
+            UPDATE dbo.Assets
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
             WHERE Asset_ID = @id
         `);
@@ -1052,7 +1053,7 @@ async function updatePrinter(req, res) {
     request.input('remarks', sql.NVarChar, data.Remarks);
 
     const query = `
-      UPDATE assets
+      UPDATE dbo.Assets
       SET
         Category = @category,
         Model_No = @modelNo,
@@ -1083,4 +1084,44 @@ async function updatePrinter(req, res) {
   }
 }
 
-module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,updateDesktops,addPrinter,updatePrinter,getAllPrinter,togglePrinterStatus};
+
+// downloade bar code 
+async function downloadBarCode(req, res) {
+  const { assetId } = req.params;
+
+  try {
+    const scanUrl = `https://ntcpwcit.in/worksphere/login.html`;
+
+    const png = await bwipjs.toBuffer({
+      bcid: 'code11',          // Barcode type
+      text: scanUrl,            // Encoded data (URL)
+      alttext: assetId,         // Displayed text under barcode
+      scale: 3,                 // Higher scale = sharper image
+      width: 5,               // Limit barcode width in pixels (approx.)
+      height: 8,                // Bar height (mm)
+      includetext: true,        // Show text below
+      textxalign: 'center',
+      textsize: 9,              // Slightly bigger font for readability
+      textyoffset: 6,           // Small gap between bars & text
+      paddingwidth: 6,          // Trim horizontal padding
+      paddingheight: 8,         // Trim top/bottom padding
+      backgroundcolor: 'FFFFFF',// White background
+      barcolor: '000000',       // Black bars
+    });
+
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Disposition': `attachment; filename="${assetId}.png"`,
+    });
+    res.end(png);
+  } catch (err) {
+    console.error('Error generating barcode:', err);
+    res.status(500).json({ error: 'Error generating barcode' });
+  }
+}
+
+
+
+
+
+module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,updateDesktops,addPrinter,updatePrinter,getAllPrinter,togglePrinterStatus,downloadBarCode};
