@@ -219,8 +219,9 @@ async function addLaptops(req, res) {
 
 let storage = data.HDD_GB_TB;           // e.g. 1
 let unit = data.storageUnit || "GB";    // e.g. TB (or fallback to GB)
+let type = data.storageType || "undefined"; 
 
-let GB = `${storage} ${unit}`;
+let GB = `${storage} ${unit} ${type}`;
 
 
   try {
