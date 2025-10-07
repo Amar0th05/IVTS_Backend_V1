@@ -1086,27 +1086,30 @@ async function updatePrinter(req, res) {
 
 
 // downloade bar code 
+
 async function downloadBarCode(req, res) {
   const { assetId } = req.params;
 
   try {
-    const scanUrl = `https://ntcpwcit.in/worksphere/login.html`;
+    // Replace placeholder with real asset ID
+    const scanUrl = `https://ntcpwcit.in/worksphere/assetsDetails.html?assetId=${assetId}`;
+    // const scanUrl = `http://localhost:5506/assetsDetails.html?assetId=${assetId}`;
+
 
     const png = await bwipjs.toBuffer({
-      bcid: 'code11',          // Barcode type
-      text: scanUrl,            // Encoded data (URL)
-      alttext: assetId,         // Displayed text under barcode
-      scale: 3,                 // Higher scale = sharper image
-      width: 5,               // Limit barcode width in pixels (approx.)
-      height: 8,                // Bar height (mm)
-      includetext: true,        // Show text below
-      textxalign: 'center',
-      textsize: 9,              // Slightly bigger font for readability
-      textyoffset: 6,           // Small gap between bars & text
-      paddingwidth: 6,          // Trim horizontal padding
-      paddingheight: 8,         // Trim top/bottom padding
-      backgroundcolor: 'FFFFFF',// White background
-      barcolor: '000000',       // Black bars
+      bcid: 'qrcode',             // ✅ Generate QR code instead of barcode
+      text: scanUrl,              // Data encoded in the QR code
+      scale: 4,                   // Adjust for size (higher = larger)
+      version: 5,                 // QR code version (auto = variable density)
+      includetext: true,          // Show label text below QR
+      alttext: assetId,           // Text shown below the QR
+      textxalign: 'center',       // Center the text
+      textsize: 10,               // Font size for label
+      textyoffset: 8,             // Gap between QR and text
+      paddingwidth: 8,            // Horizontal padding
+      paddingheight: 8,           // Vertical padding
+      backgroundcolor: 'FFFFFF',  // White background
+      barcolor: '000000',         // Black QR pixels
     });
 
     res.writeHead(200, {
@@ -1115,10 +1118,11 @@ async function downloadBarCode(req, res) {
     });
     res.end(png);
   } catch (err) {
-    console.error('Error generating barcode:', err);
-    res.status(500).json({ error: 'Error generating barcode' });
+    console.error('Error generating QR code:', err);
+    res.status(500).json({ error: 'Error generating QR code' });
   }
 }
+
 
 
 

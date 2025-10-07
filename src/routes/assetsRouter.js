@@ -35,6 +35,9 @@ assetsRouter.get('/:id',getAssets);
 // download bar code
 
 assetsRouter.get('/barcode/:assetId',downloadBarCode);
+assetsRouter.get('/details/:id',getAssets);
+
+
 
 
 
