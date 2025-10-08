@@ -1099,15 +1099,15 @@ async function downloadBarCode(req, res) {
     const png = await bwipjs.toBuffer({
       bcid: 'qrcode',             // ✅ Generate QR code instead of barcode
       text: scanUrl,              // Data encoded in the QR code
-      scale: 4,                   // Adjust for size (higher = larger)
+      scale: 2,                   // Adjust for size (higher = larger)
       version: 5,                 // QR code version (auto = variable density)
       includetext: true,          // Show label text below QR
       alttext: assetId,           // Text shown below the QR
       textxalign: 'center',       // Center the text
-      textsize: 10,               // Font size for label
-      textyoffset: 8,             // Gap between QR and text
-      paddingwidth: 8,            // Horizontal padding
-      paddingheight: 8,           // Vertical padding
+      textsize: 6,               // Font size for label
+      textyoffset: 4,             // Gap between QR and text
+      paddingwidth: 4,            // Horizontal padding
+      paddingheight: 4,           // Vertical padding
       backgroundcolor: 'FFFFFF',  // White background
       barcolor: '000000',         // Black QR pixels
     });

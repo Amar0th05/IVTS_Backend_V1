@@ -58,6 +58,8 @@ const {staffsRouter}=require('./routes/staffsRouter');
 const {talentPoolRouter} = require("./routes/TalentPoolRoute");
 const {assetsRouter} = require("./routes/assetsRouter");
 const {InternLeaveRouter}= require("./routes/InternLeaveRouter");
+const {LeaveManageRouter}=require('./routes/LeaveManageRouter');
+
 
 
 app.use(express.json());
@@ -137,6 +139,8 @@ app.use('/talentpool',talentPoolRouter);
 app.use('/assets',assetsRouter);
 //Intern Leave
 app.use('/internLeave',InternLeaveRouter);
+//Leave Management
+app.use('/leavesummary',LeaveManageRouter);
 
 
 
