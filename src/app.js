@@ -5,7 +5,7 @@ require("./models/Designation");
 require("./controllers/DesignationController");
 const app = express();
 require("./routes/DesignationRoutes");
-const {authRouter} = require("./routes/authRoutes");
+const {authRouter} = require("./routes/authRoute");
 const {resetPasswordRouter} = require("./routes/resetPasswordRoutes");
 const {logger}=require('./middlewares/logger');
 const {staffDetailsRouter} = require("./routes/staffDetailsRoutes");
