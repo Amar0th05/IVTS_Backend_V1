@@ -267,27 +267,27 @@ function startScheduler() {
         try {
             console.log("Running scheduler...");
             checkAndSendReminders();
-            // let logs = await getLogsExpiringInThirtyDays();
-            // let logsFifteenDays=await getLogsExpiringInFifteenDays();
-            // let mails = await getMails();
-            // if(!mails){
-            //     console.log('No mails found for scheduler');
-            //     return;
-            // }
-            // if(logs){
-            //     logs.forEach(log => {
-            //         mails.forEach(mail => {
-            //             sendAlert(mail.mail,30,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
-            //         });
-            //     })
-            // }
-            // if(logsFifteenDays){
-            //     logsFifteenDays.forEach(log => {
-            //         mails.forEach(mail => {
-            //             sendAlert(mail.mail,15,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
-            //         })
-            //     })
-            // }
+            let logs = await getLogsExpiringInThirtyDays();
+            let logsFifteenDays=await getLogsExpiringInFifteenDays();
+            let mails = await getMails();
+            if(!mails){
+                console.log('No mails found for scheduler');
+                return;
+            }
+            if(logs){
+                logs.forEach(log => {
+                    mails.forEach(mail => {
+                        sendAlert(mail.mail,30,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
+                    });
+                })
+            }
+            if(logsFifteenDays){
+                logsFifteenDays.forEach(log => {
+                    mails.forEach(mail => {
+                        sendAlert(mail.mail,15,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
+                    })
+                })
+            }
 
         } catch (err) {
             console.error('Error in cron job:', err);
