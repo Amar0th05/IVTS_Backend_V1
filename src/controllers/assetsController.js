@@ -743,7 +743,7 @@ async function addServer(req, res) {
         Category,
         Model_No,
         Serial_No,
-        processorType,
+        Processor_Type,
         IP_Address,
         MAC_Address,
         Port,
@@ -1092,8 +1092,8 @@ async function downloadBarCode(req, res) {
 
   try {
     // Replace placeholder with real asset ID
-    const scanUrl = `https://ntcpwcit.in/worksphere/assetsDetails.html?assetId=${assetId}`;
-    // const scanUrl = `http://localhost:5506/assetsDetails.html?assetId=${assetId}`;
+    // const scanUrl = `https://ntcpwcit.in/worksphere/assetsDetails.html?assetId=${assetId}`;
+    const scanUrl = `http://localhost:5506/assetsDetails.html?assetId=${assetId}`;
 
 
     const png = await bwipjs.toBuffer({
