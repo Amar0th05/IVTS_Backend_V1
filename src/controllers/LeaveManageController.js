@@ -1,7 +1,6 @@
 // src/controllers/LeaveManageController.js
 const {getPool} = require('../config/dbconfig');
 let pool;
-
 (async ()=>{
     try{
         pool = await getPool();
@@ -17,13 +16,13 @@ async function getLeaveSummary(req, res) {
 
     const query = `
       SELECT 
-        [Leave_ID] AS leaveId,                 -- Added Leave_ID
+        [Leave_ID] AS leaveId,
         [Employee_ID] AS employeeId,
         [Employee_Name] AS employeeName,
-        DATENAME(MONTH, [Leave_Start_Date]) AS month,  -- Convert date to month name
+        DATENAME(MONTH, [Leave_Start_Date]) AS month,  
         [Leave_Type] AS leaveType,
-        [Status] AS leaveStatus                 -- Use the readable Status column
-      FROM [IVTS_MANAGEMENT].[dbo].[LeaveInfo]
+        [Status] AS leaveStatus                 
+      FROM dbo.LeaveInfo
       ORDER BY [Leave_Start_Date] DESC;
     `;
 

@@ -126,7 +126,25 @@ async function getUser(mail){
 
         request.input('mail', sql.NVarChar(320), mail);
 
-        const query = `SELECT * FROM tbl_user WHERE mail=@mail`;
+        const query = `
+        SELECT
+        u.*,
+    s.Staff_Name,
+    s.Employee_ID_if_already_assigned AS Employee_ID,
+    s.Designation,
+    s.Gender,
+    r.role AS Role_Name
+FROM
+    tbl_user AS u
+LEFT JOIN
+    Staffs AS s
+    ON u.mail = s.Personal_Email_Address
+LEFT JOIN
+    mmt_user_roles AS r
+    ON u.role = r.role_id
+WHERE
+    u.mail =@mail
+        `;
 
         const result = await request.query(query);
 
