@@ -802,4 +802,4 @@ async function updateServer(req, res) {
   }
 }
 
-module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus};
+module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,getAllAssets};
