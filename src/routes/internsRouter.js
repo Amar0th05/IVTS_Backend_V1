@@ -9,7 +9,9 @@ const {
   uploadDocument,
   updateinternDetails,
   toggleInternStatus,
-  createIntern
+  createIntern,
+  getReportingManager,
+
 } = require('../controllers/internsController');
 
 const internsRouter = express.Router();
@@ -41,13 +43,19 @@ internsRouter.put(
   updateinternDetails
 );
 
-// Other routes
+// ✅ Static routes first
+internsRouter.get('/getReportingManager', getReportingManager);
 internsRouter.get('/all', getAllIntern);
+
+// ✅ Routes with params after static ones
 internsRouter.get('/:id/documents/metadata', getMetadata);
 internsRouter.get('/:internId/documents/:docName', downloadDocument);
 internsRouter.delete('/:internId/documents/:docName', deleteDocument);
 internsRouter.post('/:internId/documents/:docName', upload.single('file'), uploadDocument);
 internsRouter.put('/status/:id', toggleInternStatus);
 internsRouter.get('/:id', getInternById);
+
+
+
 
 module.exports = { internsRouter };

@@ -1,6 +1,6 @@
 const { sql, getPool } = require("../config/dbconfig");
 const mailer = require("nodemailer");
-
+ 
 // Create transporter (Nodemailer)
 const transporter = mailer.createTransport({
   service: "gmail",
@@ -10,7 +10,7 @@ const transporter = mailer.createTransport({
   },
 });
 let pool;
-
+ 
 (async () => {
   try {
     pool = await getPool();
@@ -18,20 +18,20 @@ let pool;
     console.error("Error while getting pool in invoice controller", err);
   }
 })();
-
+ 
 // insert intern application data
-
+ 
 async function createIntern(req, res) {
   console.log("Creating intern:", req.body);
-
+ 
   if (!req.files) {
     return res.status(400).json({ message: "File uploads are missing." });
   }
-
+ 
   try {
     const data = req.body;
     const files = req.files;
-
+ 
     const request = pool.request();
     request.input("FullName", sql.NVarChar, data.fullName);
     request.input("DateOfBirth", sql.Date, data.dob);
@@ -61,7 +61,7 @@ async function createIntern(req, res) {
     request.input("InternshipMode", sql.NVarChar, data.mode);
     request.input("HowHeardAboutUs", sql.NVarChar, data.source);
     request.input("status", sql.Bit, 1);
-
+ 
     // File fields
     request.input(
       "BonafideFile",
@@ -83,7 +83,7 @@ async function createIntern(req, res) {
       sql.VarBinary(sql.MAX),
       files?.idProof?.[0]?.buffer || null
     );
-
+ 
     // Run query
     await request.query(`
       INSERT INTO dbo.internApplicants (
@@ -100,7 +100,7 @@ async function createIntern(req, res) {
         @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile, @status
       )
     `);
-
+ 
     const internData = {
       FullName: data.fullName,
       Email: data.email,
@@ -110,26 +110,26 @@ async function createIntern(req, res) {
       PreferredStartDate: data.startDate,
       PreferredEndDate: data.endDate,
     };
-
+ 
     await sendVendorCreated(
       data.email,
       "amarnath.t@ntcpwc.iitm.ac.in",
       internData
     );
-
-
+ 
+ 
     // Send mail to HR
     await sendHRMail(
       "vasan.gk@ntcpwc.iitm.ac.in",
       data
     );
-
-    
-
+ 
+   
+ 
     console.log(" sendVendorCreated function called successfully!");
-
-
-
+ 
+ 
+ 
     return res.status(200).json({
       message: "Application Submitted Successfully and mail sent!",
     });
@@ -142,10 +142,10 @@ async function createIntern(req, res) {
     }
   }
 }
-
+ 
 async function sendVendorCreated(To, cc, data) {
   console.log("Sending intern email for:", data.FullName);
-
+ 
   const mailOptions = {
     from: process.env.EMAIL_SENDER,
     to: To,
@@ -154,7 +154,7 @@ async function sendVendorCreated(To, cc, data) {
     html: `
 <p>Dear HR,</p>
 <p>A new internship registration has been submitted. Please find the details below:</p>
-
+ 
 <p><b>Intern Details:</b></p>
 <ul>
   <li><b>Name:</b> ${data.FullName}</li>
@@ -165,15 +165,15 @@ async function sendVendorCreated(To, cc, data) {
   <li><b>Expected Start Date:</b> ${data.PreferredStartDate}</li>
   <li><b>Expected End Date:</b> ${data.PreferredEndDate}</li>
 </ul>
-
+ 
 <p>Please review the application and take necessary action.</p>
-
+ 
 <p>Best regards,<br>
 WorkSphere <br>
 NTCPWC IITM</p>
 `,
   };
-
+ 
   try {
     await transporter.sendMail(mailOptions);
     console.log("Email sent successfully!");
@@ -183,18 +183,18 @@ NTCPWC IITM</p>
     return false;
   }
 }
-
+ 
 async function createIntern(req, res) {
   console.log("Creating intern:", req.body);
-
+ 
   if (!req.files) {
     return res.status(400).json({ message: "File uploads are missing." });
   }
-
+ 
   try {
     const data = req.body;
     const files = req.files;
-
+ 
     const request = pool.request();
     request.input("FullName", sql.NVarChar, data.fullName);
     request.input("DateOfBirth", sql.Date, data.dob);
@@ -224,7 +224,7 @@ async function createIntern(req, res) {
     request.input("InternshipMode", sql.NVarChar, data.mode);
     request.input("HowHeardAboutUs", sql.NVarChar, data.source);
     request.input("status", sql.Bit, 1);
-
+ 
     // File fields
     request.input(
       "BonafideFile",
@@ -246,9 +246,9 @@ async function createIntern(req, res) {
       sql.VarBinary(sql.MAX),
       files?.idProof?.[0]?.buffer || null
     );
-
-
-
+ 
+ 
+ 
     // Run query
     await request.query(`
       INSERT INTO dbo.internApplicants (
@@ -265,19 +265,19 @@ async function createIntern(req, res) {
         @BonafideFile, @ResumeFile, @PhotoFile, @IdProofFile, @status
       )
     `);
-
+ 
     // Send mail to HR
     await sendHRMail(
       "vasan.gk@ntcpwc.iitm.ac.in",
-      
+     
       data
     );
-
+ 
     // Send confirmation mail to Intern
     await sendInternMail(data.email, data.fullName);
-
+ 
     console.log("✅ Both HR and Intern mails sent successfully!");
-
+ 
     return res.status(200).json({
       message: "Application Submitted Successfully and mails sent!",
     });
@@ -290,7 +290,7 @@ async function createIntern(req, res) {
     }
   }
 }
-
+ 
 async function sendHRMail(To, data) {
   const mailOptions = {
     from: process.env.EMAIL_SENDER,
@@ -305,13 +305,13 @@ async function sendHRMail(To, data) {
         <li><b>Phone:</b> ${data.mobile}</li>
         <li><b>University/College:</b> ${data.college}</li>
         <li><b>Course/Program:</b> ${data.degree}</li>
-      
+     
       </ul>
       <p>Please review the application and take necessary action.</p>
       <p>Best regards,<br/>WorkSphere<br/>NTCPWC IITM</p>
     `,
   };
-
+ 
   try {
     await transporter.sendMail(mailOptions);
     return true;
@@ -320,7 +320,7 @@ async function sendHRMail(To, data) {
     return false;
   }
 }
-
+ 
 async function sendInternMail(to, name) {
   const mailOptions = {
     from: process.env.EMAIL_SENDER,
@@ -334,7 +334,7 @@ async function sendInternMail(to, name) {
       <p>Best regards,<br/>Team NTCPWC</p>
     `,
   };
-
+ 
   try {
     await transporter.sendMail(mailOptions);
     return true;
@@ -343,14 +343,14 @@ async function sendInternMail(to, name) {
     return false;
   }
 }
-
+ 
 // get all interns
 async function getAllIntern(req, res) {
   try {
     const request = pool.request();
-
+ 
     const query = `
-      SELECT 
+      SELECT
         [Id], -- add a PK for identifying records
         [FullName],
         [DateOfBirth],
@@ -378,9 +378,9 @@ async function getAllIntern(req, res) {
         -- do not select VARBINARY here to avoid huge payload
       FROM dbo.internApplicants
     `;
-
+ 
     const result = await request.query(query);
-
+ 
     if (result.recordset.length > 0) {
       return res.json({ intern: result.recordset });
     } else {
@@ -396,19 +396,19 @@ async function getAllIntern(req, res) {
 //get intern by id
 async function getInternById(req, res) {
   const id = req.params.id;
-  console.log(id);
-
+  
+ 
   if (!id) {
     return res.status(404).json({ message: `no ${id} found` });
   }
-
+ 
   try {
     const request = await pool.request();
-
+ 
     await request.input("interId", sql.Int, id);
-
+ 
     const query = `
-             SELECT 
+             SELECT
         [FullName],
         [DateOfBirth],
         [Gender],
@@ -430,12 +430,13 @@ async function getInternById(req, res) {
         [EndDate],
         [InternshipMode],
         [HowHeardAboutUs],
-        [SubmissionDate]
+        [SubmissionDate],
+        [Reporting_Manager]
         -- do not select VARBINARY here to avoid huge payload
       FROM dbo.internApplicants
       WHERE Id = @interId;
     `;
-
+ 
     const result = await request.query(query);
     console.log("result", result);
     if (result.recordset.length > 0) {
@@ -451,9 +452,8 @@ async function getInternById(req, res) {
     });
   }
 }
-
+ 
 //update intern
-
 async function updateinternDetails(req, res) {
   try {
     const request = pool.request();
@@ -467,8 +467,14 @@ async function updateinternDetails(req, res) {
 
     request.input("id", sql.Int, id);
 
+    // Helper to convert empty string to null
+    function parseDateOrNull(value) {
+      return value && value.trim() !== "" ? value : null;
+    }
+
     let updates = [];
 
+    // Regular string/number fields
     if (data.fullName !== undefined) {
       updates.push("FullName = @FullName");
       request.input("FullName", sql.NVarChar(100), data.fullName);
@@ -476,7 +482,7 @@ async function updateinternDetails(req, res) {
 
     if (data.dateOfBirth !== undefined) {
       updates.push("DateOfBirth = @DateOfBirth");
-      request.input("DateOfBirth", sql.Date, data.dateOfBirth);
+      request.input("DateOfBirth", sql.Date, parseDateOrNull(data.dateOfBirth));
     }
 
     if (data.gender !== undefined) {
@@ -511,31 +517,17 @@ async function updateinternDetails(req, res) {
 
     if (data.emergencyContactName !== undefined) {
       updates.push("EmergencyContactName = @EmergencyContactName");
-      request.input(
-        "EmergencyContactName",
-        sql.NVarChar(100),
-        data.emergencyContactName
-      );
+      request.input("EmergencyContactName", sql.NVarChar(100), data.emergencyContactName);
     }
 
     if (data.emergencyContactRelationship !== undefined) {
-      updates.push(
-        "EmergencyContactRelationship = @EmergencyContactRelationship"
-      );
-      request.input(
-        "EmergencyContactRelationship",
-        sql.NVarChar(50),
-        data.emergencyContactRelationship
-      );
+      updates.push("EmergencyContactRelationship = @EmergencyContactRelationship");
+      request.input("EmergencyContactRelationship", sql.NVarChar(50), data.emergencyContactRelationship);
     }
 
     if (data.emergencyContactNumber !== undefined) {
       updates.push("EmergencyContactNumber = @EmergencyContactNumber");
-      request.input(
-        "EmergencyContactNumber",
-        sql.NVarChar(15),
-        data.emergencyContactNumber
-      );
+      request.input("EmergencyContactNumber", sql.NVarChar(15), data.emergencyContactNumber);
     }
 
     if (data.collegeName !== undefined) {
@@ -547,42 +539,36 @@ async function updateinternDetails(req, res) {
       updates.push("DegreeProgram = @DegreeProgram");
       request.input("DegreeProgram", sql.NVarChar(100), data.degreeProgram);
     }
+
     if (data.isPartOfCurriculum !== undefined) {
       updates.push("IsPartOfCurriculum = @IsPartOfCurriculum");
-      request.input(
-        "IsPartOfCurriculum",
-        sql.Bit,
-        data.isPartOfCurriculum.toLowerCase() === "yes" ? 1 : 0
-      );
+      request.input("IsPartOfCurriculum", sql.Bit, data.isPartOfCurriculum.toLowerCase() === "yes" ? 1 : 0);
     }
 
     if (data.facultySupervisor !== undefined) {
       updates.push("FacultySupervisor = @FacultySupervisor");
-      request.input(
-        "FacultySupervisor",
-        sql.NVarChar(100),
-        data.facultySupervisor
-      );
+      request.input("FacultySupervisor", sql.NVarChar(100), data.facultySupervisor);
     }
 
+    // ✅ Date fields safely converted
     if (data.preferredStartDate !== undefined) {
       updates.push("PreferredStartDate = @PreferredStartDate");
-      request.input("PreferredStartDate", sql.Date, data.preferredStartDate);
+      request.input("PreferredStartDate", sql.Date, parseDateOrNull(data.preferredStartDate));
     }
 
     if (data.preferredEndDate !== undefined) {
       updates.push("PreferredEndDate = @PreferredEndDate");
-      request.input("PreferredEndDate", sql.Date, data.preferredEndDate);
+      request.input("PreferredEndDate", sql.Date, parseDateOrNull(data.preferredEndDate));
     }
-    if(data.StartDate !== undefined)
-    {
+
+    if (data.StartDate !== undefined) {
       updates.push("StartDate = @StartDate");
-      request.input("StartDate", sql.Date, data.StartDate);
+      request.input("StartDate", sql.Date, parseDateOrNull(data.StartDate));
     }
-     if(data.EndDate !== undefined)
-    {
+
+    if (data.EndDate !== undefined) {
       updates.push("EndDate = @EndDate");
-      request.input("EndDate", sql.Date, data.EndDate);
+      request.input("EndDate", sql.Date, parseDateOrNull(data.EndDate));
     }
 
     if (data.internshipMode !== undefined) {
@@ -597,16 +583,19 @@ async function updateinternDetails(req, res) {
 
     if (data.submissionDate !== undefined) {
       updates.push("SubmissionDate = @SubmissionDate");
-      request.input("SubmissionDate", sql.Date, data.submissionDate);
+      request.input("SubmissionDate", sql.Date, parseDateOrNull(data.submissionDate));
+    }
+
+     if (data.reportingManager !== undefined) {
+      updates.push("Reporting_Manager = @Reporting_Manager");
+      request.input("Reporting_Manager", sql.NVarChar(150), data.reportingManager);
     }
 
     if (updates.length === 0) {
       return res.status(400).json({ message: "No fields provided for update" });
     }
 
-    const query = `UPDATE dbo.internApplicants SET ${updates.join(
-      ", "
-    )} WHERE id = @id`;
+    const query = `UPDATE dbo.internApplicants SET ${updates.join(", ")} WHERE id = @id`;
 
     const result = await request.query(query);
 
@@ -618,8 +607,7 @@ async function updateinternDetails(req, res) {
   } catch (err) {
     console.error("Error updating intern details:", err);
     return res.status(500).json({
-      message:
-        err.response?.data?.message || err.message || "Internal Server Error",
+      message: err.response?.data?.message || err.message || "Internal Server Error",
     });
   }
 }
@@ -629,16 +617,16 @@ async function toggleInternStatus(req, res) {
   try {
     const { id } = req.params;
     const request = await pool.request();
-
+ 
     // console.log(id);
     request.input("Id", sql.NVarChar(20), id);
-
+ 
     const result = await request.query(`
             UPDATE dbo.internApplicants
             SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END
             WHERE id = @Id
         `);
-
+ 
     if (result.rowsAffected[0] > 0) {
       res.json({ message: "Status toggled successfully" });
     } else {
@@ -652,15 +640,15 @@ async function toggleInternStatus(req, res) {
     });
   }
 }
-
+ 
 // active status
 async function getActiveStaff(req, res) {
   try {
     const pool = await getPool(req);
-
+ 
     const query = `SELECT id, FullName FROM internApplicants WHERE status = 1;`;
     const result = await pool.query(query);
-
+ 
     if (result.recordset.length > 0) {
       return res.status(200).json({ staffs: result.recordset });
     } else {
@@ -674,18 +662,18 @@ async function getActiveStaff(req, res) {
     });
   }
 }
-
+ 
 // uplode document
-
+ 
 async function getMetadata(req, res) {
   console.log("Fetching document metadata...");
   const internId = req.params.id;
   console.log("Intern  ID:", internId);
-
+ 
   try {
     // Connect to the database
     const request = pool.request();
-
+ 
     // Query presence of each document column (1 = present, 0 = null)
     const query = `
       SELECT
@@ -697,78 +685,80 @@ async function getMetadata(req, res) {
       WHERE Id = @internId
     `;
     request.input("internId", sql.NVarChar, internId);
-
+ 
     const result = await request.query(query);
-
+ 
     if (result.recordset.length === 0) {
       // No documents row found for this staff, respond with all false
       const metadata = [
-        { name: "BonafideFileData", exists: false },
-        { name: "ResumeFileData", exists: false },
-        { name: "PhotoFileData", exists: false },
-        { name: "IdProofFileData", exists: false },
-      ];
+  { name: "Bonafide", exists: false },
+  { name: "Resume", exists: false },
+  { name: "Photo", exists: false },
+  { name: "IdProof", exists: false },
+];
+ 
       return res.json(metadata);
     }
-
+ 
     const row = result.recordset[0];
-
+ 
     // Build metadata array expected by frontend
     const metadata = [
-      { name: "BonafideFileData", exists: row.BonafideFileData === 1 },
-      { name: "ResumeFileData", exists: row.ResumeFileData === 1 },
-      { name: "PhotoFileData", exists: row.PhotoFileData === 1 },
-      { name: "IdProofFileData", exists: row.IdProofFileData === 1 },
+      { name: "Bonafide", exists: row.BonafideFileData === 1 },
+      { name: "Resume", exists: row.ResumeFileData === 1 },
+      { name: "Photo", exists: row.PhotoFileData === 1 },
+      { name: "IdProof", exists: row.IdProofFileData === 1 },
     ];
-
+ 
     res.json(metadata);
   } catch (error) {
     console.error("Error fetching document metadata:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
-
+ 
 // Map docName to actual column in DB
 const documentColumnMap = {
-  BonafideFileData: "BonafideFileData",
-  ResumeFileData: "ResumeFileData",
-  PhotoFileData: "PhotoFileData",
-  IdProofFileData: "IdProofFileData",
+  Bonafide: "BonafideFileData",
+  Resume: "ResumeFileData",
+  Photo: "PhotoFileData",
+  IdProof: "IdProofFileData",
 };
-
+ 
+ 
 async function downloadDocument(req, res) {
   const { internId, docName } = req.params;
   console.log("internId", internId);
-
+ 
   if (!documentColumnMap[docName]) {
     return res.status(400).json({ error: "Invalid document name" });
   }
-
+ 
   try {
     const request = pool.request();
-
+ 
     const column = documentColumnMap[docName];
-
+ 
     const query = `
       SELECT ${column} AS DocumentData
       FROM dbo.internApplicants
       WHERE id = @internId
     `;
-
+ 
     request.input("internId", sql.NVarChar, internId);
-
+ 
     const result = await request.query(query);
-
+ 
     if (result.recordset.length === 0 || !result.recordset[0].DocumentData) {
       return res.status(404).json({ error: "Document not found" });
     }
-
+ 
     const fileBuffer = result.recordset[0].DocumentData;
-
+ 
     // Set headers for PDF file download
     res.setHeader("Content-Disposition", `attachment; filename=${docName}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
-
+ 
     // Send the PDF binary data as the response
     res.send(fileBuffer);
   } catch (error) {
@@ -776,31 +766,34 @@ async function downloadDocument(req, res) {
     res.status(500).json({ error: "Internal server error" });
   }
 }
-
+ 
 // delete
-const allowedColumns = [
-  "BonafideFileData",
-  "ResumeFileData",
-  "PhotoFileData",
-  "IdProofFileData",
-];
+// const allowedColumns = {
+//   Bonafide: "BonafideFileData",
+//   Resume: "ResumeFileData",
+//   Photo: "PhotoFileData",
+//   IdProof: "IdProofFileData",
+// };
+
+
 async function deleteDocument(req, res) {
   const { internId, docName } = req.params;
-
-  if (!allowedColumns.includes(docName)) {
+  const column = documentColumnMap[docName];
+ 
+  if (!column) {
     return res.status(400).json({ error: "Invalid document name" });
   }
-
+ 
   try {
     const request = pool.request();
-
+ 
     // Build query with the validated column name (no parameterization for column)
-    const query = `UPDATE dbo.internApplicants SET ${docName} = NULL WHERE id = @internId`;
-
+    const query = `UPDATE dbo.internApplicants SET ${column} = NULL WHERE id = @internId`;
+ 
     const result = await request
       .input("internId", sql.NVarChar, internId)
       .query(query);
-
+ 
     if (result.rowsAffected[0] > 0) {
       res
         .status(200)
@@ -813,38 +806,41 @@ async function deleteDocument(req, res) {
     res.status(500).json({ error: "Internal server error" });
   }
 }
-
+ 
 // uploade
-const allowedDocColumns = [
-  "BonafideFileData",
-  "ResumeFileData",
-  "PhotoFileData",
-  "IdProofFileData",
-];
+// const allowedDocColumns = {
+//   Bonafide: "BonafideFileData",
+//   Resume: "ResumeFileData",
+//   Photo: "PhotoFileData",
+//   IdProof: "IdProofFileData",
+// };
 
+
+ 
 async function uploadDocument(req, res) {
   const { internId, docName } = req.params;
-
+  const column = documentColumnMap[docName];
+ 
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-
-  if (!allowedDocColumns.includes(docName)) {
+ 
+  if (!column) {
     return res.status(400).json({ message: "Invalid document name" });
   }
-
+ 
   try {
     const request = pool.request();
-
+ 
     // Input parameters
     request.input("internId", sql.NVarChar, internId);
     request.input("fileData", sql.VarBinary(sql.MAX), req.file.buffer);
-
+ 
     // Dynamic column update query (column name can’t be parameterized)
-    const query = `UPDATE dbo.internApplicants SET ${docName} = @fileData WHERE id = @internId`;
-
+    const query = `UPDATE dbo.internApplicants SET ${column} = @fileData WHERE id = @internId`;
+ 
     const result = await request.query(query);
-
+ 
     if (result.rowsAffected[0] > 0) {
       res.status(200).json({
         message: `${docName} uploaded successfully for staff ${internId}`,
@@ -855,6 +851,36 @@ async function uploadDocument(req, res) {
   } catch (error) {
     console.error("Error uploading document:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+}
+ 
+
+// get reporting manager
+// get all staff
+async function getReportingManager(req, res) {
+  console.log("getstaff enter");
+  try {
+    // ✅ SQL Server query to fetch all staff
+    const result = await pool.request().query(`
+      SELECT
+                [Employee_ID_if_already_assigned] AS id,
+                [Staff_Name] AS name
+            FROM
+                [IVTS_MANAGEMENT].[dbo].[Staffs]
+            WHERE
+                [Designation] IN (
+                    'Project Manager',
+                    'Project Officer',
+                    'Senior Project Officer',
+                    'Principal Project Officer',
+                    'Principal Scientific'
+                );
+    `);
+
+    res.json({staffid:result.recordset});
+  } catch (err) {
+    console.error("Error fetching staff:", err);
+    res.status(500).json({ error: "Server error" });
   }
 }
 
@@ -868,4 +894,5 @@ module.exports = {
   updateinternDetails,
   toggleInternStatus,
   createIntern,
+  getReportingManager
 };
