@@ -743,7 +743,7 @@ async function addServer(req, res) {
         Category,
         Model_No,
         Serial_No,
-        processorType,
+        Processor_Type,
         IP_Address,
         MAC_Address,
         Port,
@@ -1055,7 +1055,6 @@ async function updatePrinter(req, res) {
     const query = `
       UPDATE dbo.Assets
       SET
-        Category = @category,
         Model_No = @modelNo,
         Serial_No = @serialNo,
         IP_Address = @ipAddress,
