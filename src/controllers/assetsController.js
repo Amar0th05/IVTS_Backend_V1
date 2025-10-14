@@ -1055,7 +1055,6 @@ async function updatePrinter(req, res) {
     const query = `
       UPDATE dbo.Assets
       SET
-        Category = @category,
         Model_No = @modelNo,
         Serial_No = @serialNo,
         IP_Address = @ipAddress,
