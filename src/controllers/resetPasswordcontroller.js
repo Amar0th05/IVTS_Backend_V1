@@ -94,8 +94,72 @@ async function resetPassword(req, res) {
         return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
+async function changePassword(req, res) {
+     const userData=req.body.userData;
+
+    try{
+
+        let updates=[];
+
+        const request=await pool.request();
+
+        if(!userData){
+            return res.status(404).json({message:"User not found"});
+        }
+
+        if(!userData.userID){
+            return res.status(404).json({message:"User not found"});
+        }
+
+        request.input('id',sql.Int,userData.userID);
+
+        if (userData.name !== undefined) {
+            updates.push("name = @name");
+            request.input('name', sql.NVarChar(30), userData.name);
+        }
+
+        if(userData.mail!==undefined){
+            if(isValidEmail(userData.mail)) {
+                updates.push("mail = @mail");
+                request.input('mail', sql.NVarChar(320), userData.mail);
+            }else{
+                return res.status(400).json({message:"Invalid email"});
+            }
+        }
+
+        if(userData.role!==undefined){
+            updates.push("role = @role");
+            request.input('role',sql.Int,userData.role);
+        }
+
+        if(userData.password !== undefined && userData.password.trim()!==''){
+            updates.push("password = @password");
+            request.input('password',sql.NVarChar(255),await hash(userData.password));
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: 'No fields provided for update' });
+        }
+
+        const query=`
+                
+                UPDATE tbl_user SET ${updates.join(',')}
+                WHERE id=@id;
+        `;
+        const result=await request.query(query);
+        if(result.rowsAffected[0]===0){
+            return res.status(404).json({message:"User not found"});
+        }
+        return res.status(200).json({message:"user updated successfully"});
+
+    }catch (err){
+        console.error(err);
+        return res.status(500).json({message: err.response?.data?.message || err.message || "Internal Server Error" });
+    }
+}
 
 module.exports = {
     sendResetPasswordMail,
     resetPassword,
+    changePassword,
 };
