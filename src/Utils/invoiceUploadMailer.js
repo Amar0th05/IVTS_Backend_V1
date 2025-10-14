@@ -62,11 +62,11 @@ async function getMailSentStatus() {
 }
 
 const transporter=mailer.createTransport({
-    service: 'hotmail',
-    auth:{
-        user:process.env.EMAIL_SENDER,
-        pass:process.env.EMAIL_PASSWORD
-    }
+   service: 'gmail',
+   auth:{
+       user:process.env.EMAIL_SENDER,
+       pass:process.env.EMAIL_PASSWORD
+   }
 });
 
 async function sendAlert(email, organisations) {
@@ -105,6 +105,7 @@ function startInvoiceUploadScheduler() {
     nodecron.schedule('0 10 10 * *', async () => {
         try {
             console.log("Running invoice upload scheduler...");
+
             let mails = await getMails();
             let organisations = await getMailSentStatus();
 
@@ -124,5 +125,6 @@ function startInvoiceUploadScheduler() {
 
     console.log("Scheduler started. Running daily at 10 AM...");
 }
+
 
 module.exports = {startInvoiceUploadScheduler};
