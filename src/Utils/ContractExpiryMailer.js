@@ -16,6 +16,7 @@ let pool;
 })();
 
 async function getLogsExpiringInThirtyDays() {
+    console.log("enter 1");
     try {
         if (!pool) {
             console.error("Database pool not initialized.");
@@ -174,7 +175,7 @@ const formattedDate = `${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMon
   const mailOptions = {
     from: `"IITM WorkSphere Portal" <${process.env.EMAIL_SENDER}>`,
     // to: intern.ManagerEmail,
-    to: to,
+    to: intern.ManagerEmail,
     cc: [hr_email, intern.InternEmail],
     subject: "Internship Ending Soon – Action Required",
     html: `
@@ -263,31 +264,31 @@ WHERE
 }
 
 function startScheduler() {
-    nodecron.schedule('* * * * *', async () => {
+    nodecron.schedule('0 10 * * *', async () => {
         try {
             console.log("Running scheduler...");
             checkAndSendReminders();
-            // let logs = await getLogsExpiringInThirtyDays();
-            // let logsFifteenDays=await getLogsExpiringInFifteenDays();
-            // let mails = await getMails();
-            // if(!mails){
-            //     console.log('No mails found for scheduler');
-            //     return;
-            // }
-            // if(logs){
-            //     logs.forEach(log => {
-            //         mails.forEach(mail => {
-            //             sendAlert(mail.mail,30,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
-            //         });
-            //     })
-            // }
-            // if(logsFifteenDays){
-            //     logsFifteenDays.forEach(log => {
-            //         mails.forEach(mail => {
-            //             sendAlert(mail.mail,15,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
-            //         })
-            //     })
-            // }
+            let logs = await getLogsExpiringInThirtyDays();
+            let logsFifteenDays=await getLogsExpiringInFifteenDays();
+            let mails = await getMails();
+            if(!mails){
+                console.log('No mails found for scheduler');
+                return;
+            }
+            if(logs){
+                logs.forEach(log => {
+                    mails.forEach(mail => {
+                        sendAlert(mail.mail,30,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
+                    });
+                })
+            }
+            if(logsFifteenDays){
+                logsFifteenDays.forEach(log => {
+                    mails.forEach(mail => {
+                        sendAlert(mail.mail,15,log.name,log.port,log.designation,convertToDDMMYYYY(log.contract_end_date.toLocaleString().split(',')[0]));
+                    })
+                })
+            }
 
         } catch (err) {
             console.error('Error in cron job:', err);
