@@ -6,24 +6,7 @@ const { connectToDB } = require("./config/dbconfig");
 
 const app = express();
 
-// ✅ 1. Enable CORS before everything else
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5506", // fallback for local
-  credentials: true,
-  exposedHeaders: ["Authorization"],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
 
-// ✅ 2. Explicitly respond to all preflight OPTIONS requests
-app.options("*", cors());
-
-// ✅ 3. Parse JSON and URL-encoded data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ✅ 4. Now connect DB and load routes
-connectToDB();
 
 
 require("./models/Designation");
@@ -79,8 +62,16 @@ const {assetsRouter} = require("./routes/assetsRouter");
 const {InternLeaveRouter}= require("./routes/InternLeaveRouter");
 const {LeaveManageRouter}=require('./routes/LeaveManageRouter');
 
-
+app.use(express.json());
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+  exposedHeaders: ['Authorization'],
+   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(logger);
+connectToDB();
+
 app.use(async (req, res, next) => {
   if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/internLeave') && !req.path.startsWith('/assets/details')) {
     try {
@@ -92,6 +83,8 @@ app.use(async (req, res, next) => {
     next();
   }
 });
+
+
 app.use("/auth",authRouter);
 app.use("/password",resetPasswordRouter);
 app.use('/staff',staffDetailsRouter);
