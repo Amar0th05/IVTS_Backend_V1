@@ -130,7 +130,7 @@ async function getRecordById(req, res) {
                    ProcessedBy,
                    lp.Remarks,
                    lp.ProcessedAt
-            FROM IVTS_MANAGEMENT.dbo.tbl_lpc_processing lp
+            FROM dbo.tbl_lpc_processing lp
                      LEFT JOIN tbl_user u ON u.id = lp.ProcessedBy
             WHERE lp.IndentID =@IndentID;
         `);
@@ -163,7 +163,7 @@ async function downloadDocument(req, res) {
 
         let result = await request.query(`
             SELECT SupportDocument
-            FROM IVTS_MANAGEMENT.dbo.tbl_lpc_processing
+            FROM dbo.tbl_lpc_processing
             WHERE IndentID = @IndentID
         `);
 

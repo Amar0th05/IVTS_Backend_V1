@@ -83,7 +83,6 @@ async function createIntern(req, res) {
       sql.VarBinary(sql.MAX),
       files?.idProof?.[0]?.buffer || null
     );
- 
     // Run query
     await request.query(`
       INSERT INTO dbo.internApplicants (
@@ -866,7 +865,7 @@ async function getReportingManager(req, res) {
                 [Employee_ID_if_already_assigned] AS id,
                 [Staff_Name] AS name
             FROM
-                [IVTS_MANAGEMENT].[dbo].[Staffs]
+               dbo.Staffs
             WHERE
                 [Designation] IN (
                     'Project Manager',
