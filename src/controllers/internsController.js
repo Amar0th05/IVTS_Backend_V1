@@ -756,9 +756,17 @@ async function downloadDocument(req, res) {
     const fileBuffer = result.recordset[0].DocumentData;
  
     // Set headers for PDF file download
+    if(docName=="Photo" || docName=="IdProof"){
+      res.setHeader("Content-Disposition", `attachment; filename=${docName}.png`);
+      res.setHeader("Content-Type", "image/png");
+      console.log("photo downloaded");
+    }
+    else{
     res.setHeader("Content-Disposition", `attachment; filename=${docName}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
- 
+    console.log("pdf downloaded");
+
+    }
     // Send the PDF binary data as the response
     res.send(fileBuffer);
   } catch (error) {
