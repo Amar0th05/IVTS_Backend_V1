@@ -235,12 +235,12 @@ async function updateStaffs(req,res) {
 
         if (data.staffName !== undefined) {
             updates.push("Staff_Name = @Staff_Name");
-            request.input('Staff_Name', sql.NVarChar(25), data.staffName);
+            request.input('Staff_Name', sql.NVarChar(50), data.staffName);
         }
 
         if (data.employeeId !== undefined) {
             updates.push("Employee_ID_if_already_assigned = @Employee_ID_if_already_assigned");
-            request.input('Employee_ID_if_already_assigned', sql.Int, data.employeeId);
+            request.input('Employee_ID_if_already_assigned', sql.NVarChar(50), data.employeeId);
         }
 
         if (data.dateOfBirth !== undefined) {
@@ -260,12 +260,12 @@ async function updateStaffs(req,res) {
 
         if (data.personalEmail !== undefined) {
             updates.push("Personal_Email_Address = @Personal_Email_Address");
-            request.input('Personal_Email_Address', sql.NVarChar(320), data.personalEmail);
+            request.input('Personal_Email_Address', sql.NVarChar(50), data.personalEmail);
         }
 
         if (data.permanentAddress !== undefined) {
             updates.push("Permanent_Address = @Permanent_Address");
-            request.input('Permanent_Address', sql.NVarChar(255), data.permanentAddress);
+            request.input('Permanent_Address', sql.NVarChar(150), data.permanentAddress);
         }
 
         if (data.dateOfJoining !== undefined) {
@@ -312,7 +312,7 @@ async function updateStaffs(req,res) {
         }
         if (data.experience !== undefined) {
             updates.push("Total_Years_of_Experience = @Total_Years_of_Experience");
-            request.input('Total_Years_of_Experience', sql.NChar, data.experience);
+            request.input('Total_Years_of_Experience', sql.NVarChar, data.experience);
         }
         if (data.portfolio !== undefined) {
             updates.push("LinkedIn_GitHub_Portfolio_Link = @LinkedIn_GitHub_Portfolio_Link");

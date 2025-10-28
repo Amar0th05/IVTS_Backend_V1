@@ -354,11 +354,12 @@ export async function rejectLeave(req, res) {
 
         const empRequest = pool.request();
         empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
-        const empResult = await empRequest.query(`
-            SELECT Official_Email_Address AS employeeEmail
-            FROM dbo.Staffs
-            WHERE Employee_ID_if_already_assigned = @employeeId
-        `);
+const empResult = await empRequest.query(`
+    SELECT 
+        COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
+    FROM dbo.Staffs
+    WHERE Employee_ID_if_already_assigned = @employeeId
+`);
         const employeeEmail = empResult.recordset[0]?.employeeEmail;
 
         await request.query(`
