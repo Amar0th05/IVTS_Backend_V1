@@ -178,9 +178,10 @@ export async function approveLeave(req, res) {
     empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
 
     const empEmailQuery = `
-      SELECT Official_Email_Address AS employeeEmail
-      FROM dbo.Staffs
-      WHERE Employee_ID_if_already_assigned = @employeeId
+      SELECT 
+        COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
+    FROM dbo.Staffs
+    WHERE Employee_ID_if_already_assigned = @employeeId
     `;
 
     const empResult = await empRequest.query(empEmailQuery);
