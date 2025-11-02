@@ -1,4 +1,4 @@
-const {getAllStaffDetails, getUserById,addStaffDetails,toggleStaffStatus,getUserByIdWithoutJoin,updateStaffDetails,downloadAllStaffDetails,getMetadata,downloadDocument,deleteDocument,uploadDocument}=require('../controllers/staffDetailsController');
+const {getAllStaffDetails, getUserById,addStaffDetails,toggleStaffStatus,getUserByIdWithoutJoin,updateStaffDetails,downloadAllStaffDetails,getMetadata,downloadDocument,deleteDocument,uploadDocument,addInsurance,updateInsurance,deleteInsurance}=require('../controllers/staffDetailsController');
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -27,5 +27,8 @@ router.get('/:id/documents/metadata', getMetadata);
 router.get('/:staffId/documents/:docName', downloadDocument);
 router.delete('/:staffId/documents/:docName', deleteDocument);
 router.post('/:staffId/documents/:docName', upload.single('file'), uploadDocument);
+router.post("/insurance", addInsurance);
+router.put("/insurance/:id", updateInsurance);
+router.delete("insurance/:id", deleteInsurance);
 
 module.exports = {staffDetailsRouter: router};

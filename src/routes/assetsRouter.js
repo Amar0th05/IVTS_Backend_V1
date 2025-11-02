@@ -1,6 +1,12 @@
-const {getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus,updateDesktops,getAllPrinter,addPrinter,togglePrinterStatus,updatePrinter,downloadBarCode}=require('../controllers/assetsController');
+const {getAllAssets,getAssets,getStaff,addLaptops,toggleLaptopStatus,updateServer,getAllLaptops,getAllDesktop,getAllServer,updateLaptops,addDesktop,addServer,toggleDesktopStatus,toggleServerStatus,updateDesktops,getAllPrinter,addPrinter,togglePrinterStatus,updatePrinter,downloadBarCode,
+    addVerification,updateAssetVerification,completeVerification,getAllVerifications,
+    getAssetVerificationByAssetId
+}=require('../controllers/assetsController');
 const express=require('express');
 const assetsRouter=express.Router();
+
+// assets
+assetsRouter.get('/',getAllAssets);
 
 // laptop
 assetsRouter.get('/Laptops',getAllLaptops);
@@ -37,9 +43,25 @@ assetsRouter.get('/:id',getAssets);
 assetsRouter.get('/barcode/:assetId',downloadBarCode);
 assetsRouter.get('/details/:id',getAssets);
 
+// Assets Verification
 
+assetsRouter.post('/verification/start',addVerification);
 
+// 2. Update Individual Asset Verification
 
+assetsRouter.post('/verification/update',updateAssetVerification);
+
+// 3. Complete Verification Cycle
+
+assetsRouter.post('/verification/complete',completeVerification);
+
+// 4. Fetch Current Verification Details
+
+assetsRouter.get('/verification/current', getAllVerifications);
+
+// 5. AssetVerification by AssetId
+
+assetsRouter.get('/verification/:assetId',getAssetVerificationByAssetId);
 
 
 module.exports={assetsRouter};

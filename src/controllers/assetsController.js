@@ -48,7 +48,8 @@ async function getAllAssets(req, res) {
         [Remarks] AS remarks,
         [Created_At] AS createdAt,
         [Updated_At] AS updatedAt,
-        [status] AS status
+        [status] AS status,
+        [Is_Verified] AS isVerification
       FROM dbo.Assets;
     `;
 
@@ -1122,9 +1123,190 @@ async function downloadBarCode(req, res) {
   }
 }
 
+// 1. Start a new Verification Cycle
+async function addVerification(req, res) {
+  const { verifiedBy} = req.body;
+
+  if (!verifiedBy) {
+    return res.status(400).json({ error: "verifiedBy is required" });
+  }
+
+  try {
+  
+    const result = await pool.request().query(`
+      DECLARE @NextID VARCHAR(10);
+      SELECT @NextID = 'V' + RIGHT('0000' + CAST(ISNULL(MAX(CAST(SUBSTRING(Verification_ID, 2, 10) AS INT)), 0) + 1 AS VARCHAR), 4)
+      FROM assets_verification;
+
+      INSERT INTO assets_verification (
+        Verification_ID, Verification_From_Date, Verified_By, Reason, Status, Created_At
+      )
+      VALUES (
+        @NextID, GETDATE(), '${verifiedBy}', 'reason', 'In Progress', GETDATE()
+      );
+
+      SELECT @NextID AS New_Verification_ID;
+    `);
+
+    const newVID = result.recordset[0]?.New_Verification_ID;
+    res.status(200).json({ verificationId: newVID });
+
+  } catch (err) {
+    console.error("❌ addVerification Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function updateAssetVerification(req, res) {
+  const { assetId, verificationId, verifiedStatus, reason, verifiedBy } = req.body;
+
+  if (!assetId || !verificationId || !verifiedStatus) {
+    return res.status(400).json({ error: "assetId, verificationId, and verifiedStatus are required" });
+  }
+
+  try {
+    // 🟩 Check if this asset already has a verification record for this cycle
+    const checkQuery = await pool.request().query(`
+      SELECT TOP 1 * 
+      FROM asset_verification_log 
+      WHERE Asset_ID = '${assetId}' AND Verification_ID = '${verificationId}'
+    `);
+
+    if (checkQuery.recordset.length > 0) {
+      // 🟨 Record exists → Update it
+      await pool.request().query(`
+        UPDATE asset_verification_log
+        SET 
+          Verified_Status = '${verifiedStatus}',
+          Reason = '${reason || ""}',
+          Verified_By = '${verifiedBy}',
+          Verified_Date = GETDATE()
+        WHERE Asset_ID = '${assetId}' AND Verification_ID = '${verificationId}'
+      `);
+    } else {
+      // 🟩 No record yet → Insert new one
+      await pool.request().query(`
+        INSERT INTO asset_verification_log (
+          Asset_ID, Verification_ID, Verified_Status, Reason, Verified_By, Verified_Date
+        )
+        VALUES (
+          '${assetId}', '${verificationId}', '${verifiedStatus}', '${reason || ""}', '${verifiedBy}', GETDATE()
+        )
+      `);
+    }
+
+    // ✅ Update asset table to mark verified
+    await pool.request().query(`
+      UPDATE Assets
+      SET Is_Verified = 1
+      WHERE Asset_ID = '${assetId}'
+    `);
+
+    res.status(200).json({
+      message: "✅ Asset verification saved successfully",
+      assetId,
+      status: verifiedStatus,
+      updated: checkQuery.recordset.length > 0 ? true : false
+    });
+
+  } catch (err) {
+    console.error("❌ updateAssetVerification Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function completeVerification(req, res) {
+  const { verificationId, reason } = req.body;
+
+  if (!verificationId) {
+    return res.status(400).json({ error: "Verification ID is required" });
+  }
+
+  try {
+
+    await pool.request().query(`
+      UPDATE assets_verification
+      SET 
+        Verification_End_Date = GETDATE(),
+        Reason = '${reason || ""}',
+        Status = 'Completed'
+      WHERE Verification_ID = '${verificationId}';
+    `);
+
+    await pool.request().query(`
+      UPDATE Assets
+      SET 
+        Is_Verified = '0';
+    `);
+
+    res.status(200).json({ message: "✅ Verification cycle marked as completed" });
+
+  } catch (err) {
+    console.error("❌ completeVerification Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
 
 
 
+ async function getAllVerifications(req, res) {
+  try {
+
+    const result = await pool.request().query(`
+      SELECT 
+          v.Verification_ID,
+          v.Verification_From_Date,
+          v.Verification_End_Date,
+          v.Verified_By,
+          v.Reason,
+          v.Status,
+          v.Created_At,
+          COUNT(l.Asset_ID) AS Total_Assets,
+          SUM(CASE WHEN l.Verified_Status IS NOT NULL THEN 1 ELSE 0 END) AS Verified_Count
+      FROM assets_verification v
+      LEFT JOIN asset_verification_log l ON v.Verification_ID = l.Verification_ID
+      GROUP BY 
+          v.Verification_ID,
+          v.Verification_From_Date,
+          v.Verification_End_Date,
+          v.Verified_By,
+          v.Reason,
+          v.Status,
+          v.Created_At
+      ORDER BY v.Created_At DESC;
+    `);
+
+    res.status(200).json({ assets: result.recordset });
+
+  } catch (err) {
+    console.error("❌ Error fetching verifications:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
 
 
-module.exports={getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,updateDesktops,addPrinter,updatePrinter,getAllPrinter,togglePrinterStatus,downloadBarCode};
+async function getAssetVerificationByAssetId(req, res) {
+  const { assetId } = req.params;
+  console.log(assetId);
+  try {
+    const result = await pool.request().query(`
+      SELECT TOP 1 * 
+      FROM asset_verification_log
+      WHERE Asset_ID = '${assetId}'
+      ORDER BY Verified_Date DESC
+    `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'No verification record found' });
+    }
+
+    return res.json({assets:result.recordset});
+
+  } catch (err) {
+    console.error("❌ getAssetVerificationByAssetId Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+
+module.exports={getAllAssets,getAllLaptops,getAssets,getStaff,updateLaptops,updateServer,addLaptops,toggleLaptopStatus,getAllDesktop,addDesktop,toggleDesktopStatus,getAllServer,addServer,toggleServerStatus,updateDesktops,addPrinter,updatePrinter,getAllPrinter,togglePrinterStatus,downloadBarCode,addVerification,updateAssetVerification,completeVerification,getAllVerifications,getAssetVerificationByAssetId};

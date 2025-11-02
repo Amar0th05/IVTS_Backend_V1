@@ -865,7 +865,7 @@ async function getReportingManager(req, res) {
                 [Employee_ID_if_already_assigned] AS id,
                 [Staff_Name] AS name
             FROM
-               dbo.Staffs
+                [dbo].[Staffs]
             WHERE
                 [Designation] IN (
                     'Project Manager',
@@ -879,7 +879,7 @@ async function getReportingManager(req, res) {
     res.json({staffid:result.recordset});
   } catch (err) {
     console.error("Error fetching staff:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ err: "Server error" });
   }
 }
 

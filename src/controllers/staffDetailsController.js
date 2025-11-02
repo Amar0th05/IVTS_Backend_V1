@@ -216,7 +216,8 @@ async function getStaffByIdWithoutJoin(req, res) {
                    policy_start_date      AS policyStartDate,
                    policy_expiry_date     AS policyExpiryDate,
                    insurance_updated      AS insuranceUpdated,
-                   updated_by             AS updatedBy
+                   updated_by             AS updatedBy,
+                   updated_date             AS updatedDate
             FROM tbl_employee_insurance
             WHERE emp_id=@id;
         `;
@@ -384,9 +385,6 @@ async function addStaffDetails(req, res) {
   }
 }
 
-
-
-
 async function updateStaffDetails(req, res) {
     try {
         const request = pool.request();
@@ -487,8 +485,6 @@ async function updateStaffDetails(req, res) {
     }
 }
 
-
-
 async function toggleStaffStatus(req, res) {
     try {
         const {id}= req.params;
@@ -531,7 +527,6 @@ async function getActiveStaff(req, res) {
         return res.status(500).json({ message: err.response?.data?.message || err.message || "Internal Server Error"  });
     }
 }
-
 
 
 // uplode document
@@ -757,6 +752,107 @@ async function uploadDocument(req, res) {
 };
 
 
+// insurance session
+
+// Add new insurance row
+async function addInsurance(req, res) {
+  try {
+    const {
+      staffId,
+      insuranceProvider,
+      policyNumber,
+      policyStartDate,
+      policyExpiryDate,
+      updatedBy = "System"
+    } = req.body;
+
+    const request = pool.request();
+    request.input("staffId", sql.NVarChar(20), staffId);
+    request.input("insuranceProvider", sql.NVarChar(255), insuranceProvider);
+    request.input("policyNumber", sql.NVarChar(100), policyNumber || null);
+    request.input("policyStartDate", sql.Date, policyStartDate);
+    request.input("policyExpiryDate", sql.Date, policyExpiryDate || null);
+    request.input("insuranceUpdated", sql.Bit, 1); // mark as updated
+    request.input("updatedBy", sql.NVarChar(255), updatedBy);
+
+    const query = `
+      INSERT INTO tbl_employee_insurance 
+      (emp_id, insurance_provider, policy_number, policy_start_date, policy_expiry_date, insurance_updated, updated_by)
+      OUTPUT INSERTED.*
+      VALUES (@staffId, @insuranceProvider, @policyNumber, @policyStartDate, @policyExpiryDate, @insuranceUpdated, @updatedBy)
+    `;
+
+    const result = await request.query(query);
+
+    res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    console.error("Error adding insurance:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+//  Update existing insurance row
+async function updateInsurance(req, res){
+  try {
+    const { id } = req.params;
+    const {
+      staffId,
+      insuranceProvider,
+      policyNumber,
+      policyStartDate,
+      policyExpiryDate,
+      updatedBy = "System"
+    } = req.body;
+
+    const request = pool.request();
+    request.input("id", id);
+    request.input("staffId", staffId);
+    request.input("insuranceProvider", insuranceProvider);
+    request.input("policyNumber", policyNumber || null);
+    request.input("policyStartDate", policyStartDate);
+    request.input("policyExpiryDate", policyExpiryDate || null);
+    request.input("updatedBy", updatedBy);
+
+    const query = `
+      UPDATE tbl_employee_insurance
+      SET 
+        emp_id = @staffId,
+        insurance_provider = @insuranceProvider,
+        policy_number = @policyNumber,
+        policy_start_date = @policyStartDate,
+        policy_expiry_date = @policyExpiryDate,
+        insurance_updated = '1',
+        updated_by = @updatedBy
+      WHERE id = @id
+    `;
+
+    await request.query(query);
+
+    res.json({ message: "Insurance record updated successfully" });
+  } catch (err) {
+    console.error("Error updating insurance:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Delete insurance record
+async function deleteInsurance (req, res){
+  try {
+    const { id } = req.params;
+
+    const request = pool.request();
+    request.input("id", id);
+
+    await request.query(`DELETE FROM tbl_employee_insurance WHERE id = @id`);
+
+    res.json({ message: "Insurance record deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting insurance:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 
@@ -777,5 +873,8 @@ module.exports={
     getMetadata,
     downloadDocument,
     deleteDocument,
-    uploadDocument
+    uploadDocument,
+    addInsurance,
+    updateInsurance,
+    deleteInsurance 
 }
