@@ -163,8 +163,114 @@ export async function approveLeave(req, res) {
     `);
 
     if (result.recordset.length === 0) {
-      return res.status(404).send("Invalid or expired approval token.");
-    }
+      return res.status(404).send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Already Processed</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+ 
+        .card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 50px 60px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            animation: fadeIn 0.6s ease;
+        }
+ 
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+ 
+        .icon {
+            width: 80px;
+            height: 80px;
+            background-color: #fee2e2;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+        }
+ 
+        svg {
+            width: 44px;
+            height: 44px;
+            stroke: #dc2626;
+            stroke-width: 2.5;
+            fill: none;
+        }
+ 
+        h2 {
+            color: #b91c1c;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+ 
+        p {
+            color: #4b5563;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+ 
+        a.button {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+ 
+        a.button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+ 
+<body>
+    <div class="card">
+        <div class="icon">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <h2>Already Processed</h2>
+        <p>The approval link you’re trying to access is invalid, expired, or has already been used.</p>
+        <p>Please check your email for a valid approval link or contact the administrator for assistance.</p>
+        <a href="/" class="button">← Go to Dashboard</a>
+    </div>
+</body>
+</html>
+`);
+    };
 
     const leave = result.recordset[0];
 
@@ -178,9 +284,10 @@ export async function approveLeave(req, res) {
     empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
 
     const empEmailQuery = `
-      SELECT Official_Email_Address AS employeeEmail
-      FROM dbo.Staffs
-      WHERE Employee_ID_if_already_assigned = @employeeId
+      SELECT 
+        COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
+    FROM dbo.Staffs
+    WHERE Employee_ID_if_already_assigned = @employeeId
     `;
 
     const empResult = await empRequest.query(empEmailQuery);
@@ -347,18 +454,124 @@ export async function rejectLeave(req, res) {
         const result = await request.query(`SELECT * FROM LeaveInfo WHERE ApprovalToken = @token`);
 
         if (result.recordset.length === 0) {
-            return res.status(404).send("Invalid or expired rejection token.");
+      return res.status(404).send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Already Processed</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
         }
+ 
+        .card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 50px 60px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            animation: fadeIn 0.6s ease;
+        }
+ 
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+ 
+        .icon {
+            width: 80px;
+            height: 80px;
+            background-color: #fee2e2;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+        }
+ 
+        svg {
+            width: 44px;
+            height: 44px;
+            stroke: #dc2626;
+            stroke-width: 2.5;
+            fill: none;
+        }
+ 
+        h2 {
+            color: #b91c1c;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+ 
+        p {
+            color: #4b5563;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+ 
+        a.button {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+ 
+        a.button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+ 
+<body>
+    <div class="card">
+        <div class="icon">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <h2>Already Processed</h2>
+        <p>The approval link you’re trying to access is invalid, expired, or has already been used.</p>
+        <p>Please check your email for a valid approval link or contact the administrator for assistance.</p>
+        <a href="/" class="button">← Go to Dashboard</a>
+    </div>
+</body>
+</html>
+`);        };
 
         const leave = result.recordset[0];
 
         const empRequest = pool.request();
         empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
-        const empResult = await empRequest.query(`
-            SELECT Official_Email_Address AS employeeEmail
-            FROM dbo.Staffs
-            WHERE Employee_ID_if_already_assigned = @employeeId
-        `);
+const empResult = await empRequest.query(`
+    SELECT 
+        COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
+    FROM dbo.Staffs
+    WHERE Employee_ID_if_already_assigned = @employeeId
+`);
         const employeeEmail = empResult.recordset[0]?.employeeEmail;
 
         await request.query(`
