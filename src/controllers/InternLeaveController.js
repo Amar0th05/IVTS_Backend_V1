@@ -138,7 +138,8 @@ export async function requestLeave(req, res) {
 
         // Step 3: Send email to manager
         leaveData.managerName = managerName; // ensure property name matches sendHRMail
-        await sendHRMail(managerEmail, leaveData, token);
+        const employeeId = leaveData.employeeId; // ensure employee email is passed
+        await sendHRMail(managerEmail,employeeId,leaveData, token);
         console.log("✅ Leave email sent to manager successfully!");
 
         res.status(200).json({ message: "Leave request submitted successfully." });
@@ -874,8 +875,9 @@ export async function rejectLeaveForm(req, res) {
 
 
 // Function to send email to manager with Approve/Reject links
-async function sendHRMail(to, leave, token) {
-  const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
+async function sendHRMail(to, employeeId, leave, token) {
+    const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
+  // const baseUrl = process.env.BASE_URL || "http://localhost:5000";
   const approveUrl = `${baseUrl}/internLeave/approve/${token}`;
   const rejectUrl = `${baseUrl}/internLeave/reject/${token}`;
 
@@ -883,53 +885,127 @@ async function sendHRMail(to, leave, token) {
   const formattedEnd = new Date(leave.endDate).toLocaleDateString();
   const submittedOn = new Date().toLocaleDateString();
 
-  const mailOptions = {
+  // --- 🔹 1️⃣ Fetch employee email from DB
+  const empEmailQuery = `
+    SELECT 
+      COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
+    FROM dbo.Staffs
+    WHERE Employee_ID_if_already_assigned = @employeeId
+  `;
+
+  let employeeEmail = null;
+  try {
+    const empRequest = new sql.Request(pool);
+    const empResult = await empRequest
+      .input("employeeId", employeeId)
+      .query(empEmailQuery);
+
+    if (empResult.recordset.length === 0 || !empResult.recordset[0].employeeEmail) {
+      console.warn(`⚠️ Employee email not found for ID: ${employeeId}`);
+    } else {
+      employeeEmail = empResult.recordset[0].employeeEmail;
+    }
+  } catch (err) {
+    console.error("❌ Error fetching employee email:", err);
+  }
+
+  // --- 2️⃣ Mail to Manager
+  const managerMail = {
     from: process.env.EMAIL_SENDER,
-    to,
-    cc: process.env.HR_CC_EMAIL,
+    to, // Manager's email
     subject: `Leave Application Request – ${leave.employeeName} (${formattedStart} to ${formattedEnd})`,
     html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333; max-width: 600px;">
+      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
         <p><b>Dear ${leave.managerName},</b></p>
+        <p><b>${leave.employeeName}</b> (Employee ID: <b>${leave.employeeId}</b>) has applied for leave.</p>
 
-        <p><b>A new leave application has been submitted by ${leave.employeeName}</b> 
-        (Employee ID: <b>${leave.employeeId}</b>). Please review the details below:</p>
-
-        <ul style="margin-top: 10px; margin-bottom: 20px;">
+        <ul>
           <li><b>Leave Type:</b> ${leave.leaveType}</li>
-          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} Days)</li>
+          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
           <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
           <li><b>Submitted On:</b> ${submittedOn}</li>
         </ul>
 
-        <p><b>Please take an action below:</b></p>
+        <p>Please take action below:</p>
+        <a href="${approveUrl}" style="background:#28a745;color:#fff;padding:10px 15px;border-radius:5px;text-decoration:none;">✅ Approve</a>
+        <a href="${rejectUrl}" style="background:#dc3545;color:#fff;padding:10px 15px;border-radius:5px;text-decoration:none;margin-left:10px;">❌ Reject</a>
 
-        <div style="margin-top: 10px;">
-          <a href="${approveUrl}" 
-            style="display: inline-block; padding: 10px 18px; background-color: #28a745; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 12px;">
-            ✅ Approve
-          </a>
-
-          <a href="${rejectUrl}" 
-            style="display: inline-block; padding: 10px 18px; background-color: #dc3545; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">
-            ❌ Reject
-          </a>
-        </div>
-
-        <p style="margin-top: 25px;"><b>Regards,</b><br/><b>NTCPWC WorkSphere</b></p>
-
-        <hr style="margin-top: 25px; border: none; border-top: 1px solid #ddd;">
-        <small style="color: #777;">This is an automated message. Please do not reply directly to this email.</small>
+        <p style="margin-top:20px;">Regards,<br><b>NTCPWC WorkSphere</b></p>
+        <hr style="border:none;border-top:1px solid #ddd;">
+        <small style="color:#777;">This is an automated message. Please do not reply.</small>
       </div>
     `,
   };
 
+  // --- 3️⃣ Mail to HR
+  const hrMail = {
+    from: process.env.EMAIL_SENDER,
+    to: process.env.HR_CC_EMAIL,
+    subject: `HR Copy – Leave Request of ${leave.employeeName} (${formattedStart} to ${formattedEnd})`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
+        <p><b>Dear HR Team,</b></p>
+        <p>A leave request has been submitted by <b>${leave.employeeName}</b> (Employee ID: ${leave.employeeId}).</p>
+        <ul>
+          <li><b>Leave Type:</b> ${leave.leaveType}</li>
+          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
+          <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
+          <li><b>Submitted On:</b> ${submittedOn}</li>
+          <li><b>Reporting Manager:</b> ${leave.managerName}</li>
+        </ul>
+        <p>This is a copy for HR records only. No action is required.</p>
+
+        <p style="margin-top:20px;">Regards,<br><b>NTCPWC WorkSphere</b></p>
+        <hr style="border:none;border-top:1px solid #ddd;">
+        <small style="color:#777;">This is an automated message. Please do not reply.</small>
+      </div>
+    `,
+  };
+
+  // --- 4️⃣ Mail to Employee (only if found)
+  const employeeMail = employeeEmail
+    ? {
+        from: process.env.EMAIL_SENDER,
+        to: employeeEmail,
+        subject: `Leave Request Submitted – ${formattedStart} to ${formattedEnd}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
+            <p><b>Dear ${leave.employeeName},</b></p>
+            <p>Your leave application has been successfully submitted and sent to your manager (<b>${leave.managerName}</b>) for approval.</p>
+
+            <ul>
+              <li><b>Leave Type:</b> ${leave.leaveType}</li>
+              <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
+              <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
+              <li><b>Submitted On:</b> ${submittedOn}</li>
+            </ul>
+
+            <p>You will receive an update once your manager takes action.</p>
+
+            <p style="margin-top:20px;">Regards,<br><b>NTCPWC WorkSphere</b></p>
+            <hr style="border:none;border-top:1px solid #ddd;">
+            <small style="color:#777;">This is an automated message. Please do not reply.</small>
+          </div>
+        `,
+      }
+    : null;
+
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Leave request email sent successfully to ${to}`, info.response);
+    const tasks = [
+      transporter.sendMail(managerMail),
+      transporter.sendMail(hrMail),
+    ];
+    if (employeeMail) tasks.push(transporter.sendMail(employeeMail));
+
+    const results = await Promise.all(tasks);
+
+    console.log(`✅ Manager mail sent: ${results[0].response}`);
+    console.log(`✅ HR mail sent: ${results[1].response}`);
+    if (employeeMail) console.log(`✅ Employee mail sent: ${results[2].response}`);
+
     return true;
   } catch (err) {
-    console.error("❌ Error sending leave request email:", err);
+    console.error("❌ Error sending leave request emails:", err);
     return false;
   }
 }
@@ -944,7 +1020,6 @@ async function sendEmployeeNotificationMail(to, leave, status) {
   const isApproved = status.toLowerCase() === "approved";
   const isRejected = status.toLowerCase() === "rejected";
 
-  // For rejected leaves, use the Rejection_Reason field
   const managerRemarks =
     isRejected && leave.rejectionReason
       ? leave.rejectionReason
@@ -952,34 +1027,57 @@ async function sendEmployeeNotificationMail(to, leave, status) {
       ? ""
       : "N/A";
 
-  const subject = isApproved
-    ? "Leave Approved"
-    : "Leave Request Update";
+  const subject = isApproved ? "Leave Approved" : "Leave Request Update";
 
+  // ✅ Common & modern HTML email template (consistent for all types)
   const htmlBody = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Hi <b>${leave.employeeName}</b>,</p>
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f6f9fc; padding: 25px;">
+      <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="background-color: #1a73e8; color: #fff; padding: 18px 25px;">
+          <h2 style="margin: 0; font-size: 20px;">NTCPWC WorkSphere</h2>
+          <p style="margin: 4px 0 0; font-size: 14px;">Leave Notification</p>
+        </div>
 
-      <p>Your leave request for 
-      <b>${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</b> 
-      has been <b>${status}</b> by <b>${leave.managerName}</b>.</p>
+        <!-- Body -->
+        <div style="padding: 25px; color: #333;">
+          <p>Hi <b>${leave.employeeName}</b>,</p>
 
-      ${
-        isRejected
-          ? `<p><b>Remarks from Manager:</b> <b>${managerRemarks}</b></p>`
-          : ""
-      }
+          <p>
+            Your leave request from <b>${formattedStart}</b> to <b>${formattedEnd}</b>
+            (<b>${leave.totalDays} days</b>) has been
+            <span style="text-transform: capitalize; font-weight: bold; color: ${
+              isApproved ? "#0f9d58" : isRejected ? "#d93025" : "#f9ab00"
+            };">${status}</span>
+            by <b>${leave.managerName}</b>.
+          </p>
 
-      ${
-        isApproved
-          ? `<p>Please ensure any pending work is managed before you leave. Enjoy your time off!</p>`
-          : `<p>You may discuss alternative dates with your manager if needed. HR has been notified for records.</p>`
-      }
+          ${
+            isRejected
+              ? `
+              <div style="background:#fdecea; border-left:4px solid #d93025; padding:10px 15px; border-radius:6px; margin:15px 0;">
+                <b>Remarks from Manager:</b><br/>
+                ${managerRemarks}
+              </div>`
+              : ""
+          }
 
-      <p>Regards,<br/><b>NTCPWC WorkSphere</b></p>
+          ${
+            isApproved
+              ? `<p>Please ensure any pending work is managed before your leave. Enjoy your time off!</p>`
+              : `<p>You may discuss alternative dates with your manager if needed. HR has been notified for records.</p>`
+          }
 
-      <hr style="margin-top: 20px; border: none; border-top: 1px solid #ddd;">
-      <small>This is an automated email. Please do not reply directly.</small>
+          <p style="margin-top: 25px;">Best regards,<br/><b>NTCPWC WorkSphere</b></p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color:#f1f3f4; text-align:center; padding:15px; font-size:12px; color:#777;">
+          <hr style="border:none; border-top:1px solid #ddd; margin-bottom:10px;">
+          <p style="margin:0;">This is an automated email. Please do not reply directly.</p>
+        </div>
+      </div>
     </div>
   `;
 
