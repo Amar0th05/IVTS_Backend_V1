@@ -426,9 +426,9 @@ export async function approveLeave(req, res) {
             </svg>
         </div>
         <h2>Leave Approved Successfully!</h2>
-        <p>Your leave request has been approved successfully.</p>
-        <p>You will be notified once the employee has been updated.</p>
-        <a href="/" class="button">+ Go to Dashboard</a>
+        <p>You have successfully approved the employee’s leave request.</p>
+        <p>The employee will be notified accordingly.</p>
+        <a href="/" class="button">+ Go to Worksphere</a>
     </div>
 </body>
 
@@ -554,10 +554,9 @@ export async function rejectLeave(req, res) {
                 <line x1="9" y1="9" x2="15" y2="15"></line>
             </svg>
         </div>
-        <h2>Already Processed</h2>
+        <h2> Action Already Processed</h2>
         <p>The approval link you’re trying to access is invalid, expired, or has already been used.</p>
-        <p>Please check your email for a valid approval link or contact the administrator for assistance.</p>
-        <a href="/" class="button">← Go to Dashboard</a>
+        <a href="/" class="button">← Go to Worksphere</a>
     </div>
 </body>
 </html>
@@ -690,10 +689,10 @@ a.button:hover { background-color: #1d4ed8; }
 
         </svg>
     </div>
-    <h2>Leave Request Rejected!</h2>
-    <p>The leave request has been rejected successfully.</p>
+    <h2>Leave Request Rejected</h2>
+    <p>You have successfully rejected the employee’s leave request.</p>
     <p>The employee will be notified accordingly.</p>
-    <a href="/" class="button">+ Go to Dashboard</a>
+    <a href="/" class="button">+ Go to Worksphere</a>
 </div>
 </body>
 </html>
@@ -877,7 +876,7 @@ export async function rejectLeaveForm(req, res) {
 // Function to send email to manager with Approve/Reject links
 async function sendHRMail(to, employeeId, leave, token) {
     const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
-  // const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+  // const baseUrl = process.env.BASE_URL || "http://localhost:5500";
   const approveUrl = `${baseUrl}/internLeave/approve/${token}`;
   const rejectUrl = `${baseUrl}/internLeave/reject/${token}`;
 
@@ -1027,65 +1026,104 @@ async function sendEmployeeNotificationMail(to, leave, status) {
       ? ""
       : "N/A";
 
-  const subject = isApproved ? "Leave Approved" : "Leave Request Update";
+  // ---------------------------------
+  // Leave type labels
+  // ---------------------------------
+  const leaveTypeLabels = {
+     "CL": "Casual Leave (CL)",
+    "SL": "Sick Leave (SL)",
+    "EL": "Earned Leave (EL)",
+    "Comp-off": "Compensatory Off (Comp-off)",
+    "Other": "Other"
+  };
 
-  // ✅ Common & modern HTML email template (consistent for all types)
+  // ---------------------------------
+  // Approved and Rejected messages
+  // ---------------------------------
+  const leaveMessages = {
+    "CL": {
+      approved:
+        "Please make sure any pending work is handled or updated before your leave. Hope you enjoy your time away.",
+      rejected:
+        "Your casual leave request could not be approved at this time. You may discuss alternate dates with your manager if required.",
+    },
+    "SL": {
+      approved:
+        "Take the rest you need and focus on getting better. Wishing you a quick recovery — HR has been notified.",
+      rejected:
+        "Your sick leave request has not been approved. Please reach out to your manager if you wish to discuss this further.",
+    },
+    "EL": {
+      approved:
+        "Ensure your ongoing tasks are wrapped up or handed over before you leave. Enjoy your well-earned break.",
+      rejected:
+        "Your earned leave request has been declined. You can check with your manager if rescheduling is possible.",
+    },
+    "Comp-off": {
+      approved:
+        "Enjoy your compensatory day off — a well-deserved break for your extra effort.",
+      rejected:
+        "Your compensatory off request was not approved. Please verify eligibility or discuss with your manager.",
+    },
+    "Other": {
+      approved:
+        "We understand your situation and appreciate you informing us. Please take the time you need — HR has been notified for records.",
+      rejected:
+        "Your leave request could not be approved at this time. Please get in touch with your manager if further discussion is needed.",
+    },
+  };
+
+  const leaveLabel = leaveTypeLabels[leave.leaveType] || "Leave";
+  const formattedStatus =
+    status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  const subjectLine = `Your ${leaveLabel} Has Been ${formattedStatus}`;
+
+  // ---------------------------------
+  // HTML Email Template
+  // ---------------------------------
   const htmlBody = `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f6f9fc; padding: 25px;">
-      <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); overflow: hidden;">
-        
-        <!-- Header -->
-        <div style="background-color: #1a73e8; color: #fff; padding: 18px 25px;">
-          <h2 style="margin: 0; font-size: 20px;">NTCPWC WorkSphere</h2>
-          <p style="margin: 4px 0 0; font-size: 14px;">Leave Notification</p>
-        </div>
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; color:#333; font-size:15px; line-height:1.6;">
+      <p>Hi <b>${leave.employeeName}</b>,</p>
 
-        <!-- Body -->
-        <div style="padding: 25px; color: #333;">
-          <p>Hi <b>${leave.employeeName}</b>,</p>
+      <p>
+        Your <b>${leaveLabel}</b> request from <b>${formattedStart}</b> to <b>${formattedEnd}</b>
+        (<b>${leave.totalDays} days</b>) has been 
+        <span style="font-weight:bold;">${formattedStatus}</span>
+        by <b>${leave.managerName}</b>.
+      </p>
 
-          <p>
-            Your leave request from <b>${formattedStart}</b> to <b>${formattedEnd}</b>
-            (<b>${leave.totalDays} days</b>) has been
-            <span style="text-transform: capitalize; font-weight: bold; color: ${
-              isApproved ? "#0f9d58" : isRejected ? "#d93025" : "#f9ab00"
-            };">${status}</span>
-            by <b>${leave.managerName}</b>.
-          </p>
+      ${
+        isRejected
+          ? `<p style="background:#fdecea; padding:10px 15px; border-radius:6px;">
+              <b>Remarks from Manager:</b><br/>
+              ${managerRemarks}
+            </p>`
+          : ""
+      }
 
-          ${
-            isRejected
-              ? `
-              <div style="background:#fdecea; border-left:4px solid #d93025; padding:10px 15px; border-radius:6px; margin:15px 0;">
-                <b>Remarks from Manager:</b><br/>
-                ${managerRemarks}
-              </div>`
-              : ""
-          }
+      <p>${
+        console.log('kuyuu',leave.leaveType),
+        leaveMessages[leave.leaveType]
+          ? leaveMessages[leave.leaveType][isApproved ? "approved" : "rejected"]
+          : leaveMessages["Other"][isApproved ? "approved" : "rejected"]
+      }</p>
+    
 
-          ${
-            isApproved
-              ? `<p>Please ensure any pending work is managed before your leave. Enjoy your time off!</p>`
-              : `<p>You may discuss alternative dates with your manager if needed. HR has been notified for records.</p>`
-          }
+      <p>Best regards,<br/><b>NTCPWC WorkSphere</b></p>
 
-          <p style="margin-top: 25px;">Best regards,<br/><b>NTCPWC WorkSphere</b></p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background-color:#f1f3f4; text-align:center; padding:15px; font-size:12px; color:#777;">
-          <hr style="border:none; border-top:1px solid #ddd; margin-bottom:10px;">
-          <p style="margin:0;">This is an automated email. Please do not reply directly.</p>
-        </div>
-      </div>
+      <hr style="border:none; border-top:1px solid #ddd; margin:25px 0;">
+      <p style="font-size:12px; color:#777;">This is an automated email. Please do not reply directly.</p>
     </div>
   `;
 
+  // ---------------------------------
+  // Mail sending
+  // ---------------------------------
   const mailOptions = {
     from: process.env.EMAIL_SENDER,
     to,
-    cc: process.env.HR_CC_EMAIL, // optional: keep HR in CC
-    subject,
+    cc: process.env.HR_CC_EMAIL, // optional: HR copy
+    subject: subjectLine,
     html: htmlBody,
   };
 

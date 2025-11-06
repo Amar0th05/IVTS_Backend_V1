@@ -174,9 +174,9 @@ async function updateTalent(req, res) {
       updates.push('mail = @mail');
       request.input('mail', sql.NVarChar(50), data.mail);
     }
-    if (data.postFor !== undefined) {
+    if (data.postfor !== undefined) {
       updates.push('postFor = @postFor');
-      request.input('postFor', sql.NVarChar(50), data.postFor);
+      request.input('postFor', sql.NVarChar(50), data.postfor);
     }
     if (data.location !== undefined) {
       updates.push('location = @location');
