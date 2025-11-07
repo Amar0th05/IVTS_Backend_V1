@@ -43,7 +43,7 @@ export async function getManagerByEmployeeId(req, res) {
         const result = await request.query(query);
 
         if (result.recordset.length > 0) {
-            return res.json({ managerName: result.recordset[0].managerName });
+            return res.json({ manager: result.recordset[0].managerName });
         } else {
             return res.status(404).json({ message: "No manager found for this employee ID." });
         }
@@ -66,7 +66,7 @@ export async function getemployees(req, res) {
             ORDER BY Employee_ID_if_already_assigned ASC
         `);
 
-        res.json({ staffid: result.recordset });
+        res.json({ employees: result.recordset });
     } catch (err) {
         console.error("Error fetching staff:", err);
         res.status(500).json({ error: "Server error" });
