@@ -18,8 +18,8 @@ async function getAllTalent(req, res) {
   try {
     const request = pool.request();
     const query = `
-      SELECT personID, personName, dateOfBirth, aadharNumber,
-                                  contactNumber, mail, permanentAddress
+      SELECT personID, personName, dateOfBirth,
+                                  contactNumber, mail,postFor,location
       FROM dbo.talentpool ORDER BY createdAt DESC
     `;
     const result = await request.query(query);
@@ -48,8 +48,8 @@ async function getTalentById(req, res) {
     request.input('id', sql.NVarChar(20), id);
 
     const query = `
-      SELECT personID, personName, dateOfBirth, aadharNumber,
-                                  contactNumber, mail, permanentAddress
+      SELECT personID, personName, dateOfBirth,
+                                  contactNumber, mail,postFor,location
       FROM dbo.talentpool
       WHERE personID = @id
     `;
@@ -78,20 +78,19 @@ async function addTalent(req, res) {
       return res.status(400).json({ message: "Invalid JSON format in request body" });
     }
 
-    if (!data || !data.personID) {
+    if (!data) {
       return res.status(400).json({ message: "Missing person data or personID" });
     }
 
     const request = pool.request();
 
     // Match SQL schema definitions
-    request.input("personID", sql.NVarChar(50), data.personID);
     request.input("personName", sql.NVarChar(50), data.personName || null);
     request.input("dateOfBirth", sql.Date, data.dateOfBirth || null);
-    request.input("aadharNumber", sql.Numeric(12, 0), data.aadharNumber || null);
     request.input("contactNumber", sql.Numeric(10, 0), data.contactNumber || null);
     request.input("mail", sql.NVarChar(50), data.mail || null);
-    request.input("permanentAddress", sql.NVarChar(255), data.permanentAddress || null);
+    request.input("postFor", sql.NVarChar(50), data.postfor || null);
+    request.input("location", sql.NVarChar(50), data.location || null);
 
     // Handle uploaded files
     const files = {};
@@ -105,6 +104,7 @@ async function addTalent(req, res) {
     }
 
     const fileFields = {
+      resumeFile: "ResumeFile",
       aadhaarFile: "AadhaarFile",
       panFile: "PANFile",
       academicFile: "AcademicCertificateFile",
@@ -112,8 +112,7 @@ async function addTalent(req, res) {
       certFile10: "TenthCertificateFile",
       certFile12: "TwelfthCertificateFile",
       certFileGMDSS: "GMDSSCertificateFile",
-      certFileIALA: "IALACertificateFile",
-      resumeFile: "ResumeFile"
+      certFileIALA: "IALACertificateFile"
     };
 
     for (let [inputName, columnName] of Object.entries(fileFields)) {
@@ -123,16 +122,14 @@ async function addTalent(req, res) {
 
     const query = `
       INSERT INTO dbo.talentpool (
-        personID, personName, dateOfBirth, aadharNumber, contactNumber, mail, permanentAddress,
-        AadhaarFile, PANFile, AcademicCertificateFile, IDCardFile,
-        TenthCertificateFile, TwelfthCertificateFile, GMDSSCertificateFile, IALACertificateFile,
-        ResumeFile
+        personName,dateOfBirth,contactNumber, mail,postFor,location,
+        ResumeFile,AadhaarFile, PANFile, AcademicCertificateFile, IDCardFile,
+        TenthCertificateFile, TwelfthCertificateFile, GMDSSCertificateFile, IALACertificateFile
       )
       VALUES (
-        @personID, @personName, @dateOfBirth, @aadharNumber, @contactNumber, @mail, @permanentAddress,
-        @aadhaarFile, @panFile, @academicFile, @idCardFile,
-        @certFile10, @certFile12, @certFileGMDSS, @certFileIALA,
-        @ResumeFile
+        @personName, @dateOfBirth,@contactNumber, @mail, @postFor, @location,
+        @ResumeFile,@aadhaarFile, @panFile, @academicFile, @idCardFile,
+        @certFile10, @certFile12, @certFileGMDSS, @certFileIALA
       )
     `;
 
@@ -169,10 +166,6 @@ async function updateTalent(req, res) {
       updates.push('dateOfBirth = @dateOfBirth');
       request.input('dateOfBirth', sql.Date, data.dateOfBirth);
     }
-    if (data.aadharNumber !== undefined) {
-      updates.push('aadharNumber = @aadharNumber');
-      request.input('aadharNumber', sql.Numeric(12,0), data.aadharNumber);
-    }
     if (data.contactNumber !== undefined) {
       updates.push('contactNumber = @contactNumber');
       request.input('contactNumber', sql.Numeric(10,0), data.contactNumber);
@@ -181,15 +174,17 @@ async function updateTalent(req, res) {
       updates.push('mail = @mail');
       request.input('mail', sql.NVarChar(50), data.mail);
     }
-    if (data.permanentAddress !== undefined) {
-      updates.push('permanentAddress = @permanentAddress');
-      request.input('permanentAddress', sql.NVarChar(255), data.permanentAddress);
+    if (data.postfor !== undefined) {
+      updates.push('postFor = @postFor');
+      request.input('postFor', sql.NVarChar(50), data.postfor);
     }
-
+    if (data.location !== undefined) {
+      updates.push('location = @location');
+      request.input('location', sql.NVarChar(50), data.location);
+    }
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
-
     const query = `
       UPDATE dbo.talentpool
       SET ${updates.join(', ')}
@@ -212,9 +207,9 @@ async function updateTalent(req, res) {
  * Document columns in talentpool
  */
 const documentColumns = [
-  'AadhaarFile', 'PANFile', 'AcademicCertificateFile', 'IDCardFile',
+   'ResumeFile','AadhaarFile', 'PANFile', 'AcademicCertificateFile', 'IDCardFile',
   'TenthCertificateFile', 'TwelfthCertificateFile',
-  'GMDSSCertificateFile', 'IALACertificateFile', 'ResumeFile'
+  'GMDSSCertificateFile', 'IALACertificateFile'
 ];
 
 /**
