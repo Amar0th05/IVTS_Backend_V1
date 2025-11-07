@@ -408,6 +408,7 @@ async function getInternById(req, res) {
  
     const query = `
              SELECT
+             [id],
         [FullName],
         [DateOfBirth],
         [Gender],
@@ -430,7 +431,9 @@ async function getInternById(req, res) {
         [InternshipMode],
         [HowHeardAboutUs],
         [SubmissionDate],
-        [Reporting_Manager]
+        [Reporting_Manager],
+        [Acceptance_GenerateDate],
+        [Completion_GenerateDate]
         -- do not select VARBINARY here to avoid huge payload
       FROM dbo.internApplicants
       WHERE Id = @interId;
@@ -891,6 +894,34 @@ async function getReportingManager(req, res) {
   }
 }
 
+
+//update intern
+async function generateDate(req, res) {
+  try {
+    const request = pool.request();
+    const { data } = req.body;
+    const id = req.params.id;
+
+    // Input parameters
+    request.input("id", sql.Int, id);
+    request.input("date", sql.Date, data.generateDate);
+
+    const query = `UPDATE dbo.internApplicants SET ${data.generateName}=@date WHERE id = @id`;
+
+    const result = await request.query(query);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ message: "Intern ID not found" });
+    }
+
+    return res.json({ message: "Intern details updated successfully" });
+  } catch (err) {
+    console.error("Error updating intern Generate date:", err);
+    return res.status(500).json({
+      message: err.response?.data?.message || err.message || "Internal Server Error",
+    });
+  }
+}
 module.exports = {
   getAllIntern,
   getInternById,
@@ -901,5 +932,6 @@ module.exports = {
   updateinternDetails,
   toggleInternStatus,
   createIntern,
-  getReportingManager
+  getReportingManager,
+  generateDate
 };
