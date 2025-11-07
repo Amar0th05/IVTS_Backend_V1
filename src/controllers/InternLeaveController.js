@@ -57,21 +57,32 @@ export async function getManagerByEmployeeId(req, res) {
 
 // Function to get all employee IDs and names
 export async function getemployees(req, res) {
-    console.log("Fetching employee details");
-    try {
-        const result = await pool.request().query(`
-            SELECT Employee_ID_if_already_assigned AS id,
-                   Staff_Name AS name
-            FROM dbo.Staffs
-            ORDER BY Employee_ID_if_already_assigned ASC
-        `);
+  const { email } = req.params;
+  console.log("Fetching employee details for:", email);
 
-        res.json({ employees: result.recordset });
-    } catch (err) {
-        console.error("Error fetching staff:", err);
-        res.status(500).json({ error: "Server error" });
-    }
+  try {
+    const request = pool.request();
+
+    // ✅ Correct variable name: 'email' (not 'emai')
+    request.input('email', sql.NVarChar, email);
+
+    const result = await request.query(`
+      SELECT 
+        Employee_ID_if_already_assigned AS id,
+        Staff_Name AS FullName,
+        Reporting_Manager_Name AS ManagerName
+      FROM dbo.Staffs
+      WHERE Personal_Email_Address = @email 
+         OR Official_Email_Address = @email
+    `);
+
+    res.json({ employees: result.recordset[0] });
+  } catch (err) {
+    console.error("Error fetching staff:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 }
+
 
 // --- 1. Employee submits leave request ---
 export async function requestLeave(req, res) {
@@ -875,8 +886,8 @@ export async function rejectLeaveForm(req, res) {
 
 // Function to send email to manager with Approve/Reject links
 async function sendHRMail(to, employeeId, leave, token) {
-    const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
-  // const baseUrl = process.env.BASE_URL || "http://localhost:5500";
+    // const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
+  const baseUrl = process.env.BASE_URL || "http://localhost:5500";
   const approveUrl = `${baseUrl}/internLeave/approve/${token}`;
   const rejectUrl = `${baseUrl}/internLeave/reject/${token}`;
 

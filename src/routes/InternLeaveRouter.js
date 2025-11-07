@@ -4,7 +4,7 @@ const { requestLeave,rejectLeaveForm,approveLeave,rejectLeave, getemployees, get
 const InternLeaveRouter = express.Router();
 
 // GET employee list (for dropdown)
-InternLeaveRouter.get('/getemployees', getemployees);
+InternLeaveRouter.get('/getemployees/:email', getemployees);
 
 
 
