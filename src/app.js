@@ -73,7 +73,7 @@ app.use(logger);
 connectToDB();
 
 app.use(async (req, res, next) => {
-  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/assets/details')) {
+  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/assets/details') && !req.path.startsWith('/internLeaveRequest/')) {
     try {
       await authMiddleware(req, res, next);
     } catch (error) {
@@ -133,6 +133,8 @@ app.use('/talentpool',talentPoolRouter);
 app.use('/assets',assetsRouter);
 //Intern Leave
 app.use('/internLeave',InternLeaveRouter);
+app.use('/internLeaveRequest',InternLeaveRouter);
+
 //Leave Management
 app.use('/leavesummary',LeaveManageRouter);
 

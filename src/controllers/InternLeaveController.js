@@ -1,6 +1,6 @@
-import { sql, getPool } from '../config/dbconfig.js';
+import { sql, getPool } from "../config/dbconfig.js";
 // mailService.js
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 
 // Configure Gmail transporter
@@ -15,44 +15,47 @@ const transporter = nodemailer.createTransport({
 let pool;
 
 (async () => {
-    try {
-        pool = await getPool();
-    } catch (err) {
-        console.error('Error while getting pool in intern leave controller', err);
-    }
+  try {
+    pool = await getPool();
+  } catch (err) {
+    console.error("Error while getting pool in intern leave controller", err);
+  }
 })();
 
 // Function to get the reporting manager for a given employee ID
 export async function getManagerByEmployeeId(req, res) {
-    const { employeeId } = req.params;
+  const { employeeId } = req.params;
 
-    if (!employeeId) {
-        return res.status(400).json({ message: "Employee ID is required." });
-    }
+  if (!employeeId) {
+    return res.status(400).json({ message: "Employee ID is required." });
+  }
 
-    try {
-        const request = pool.request();
-        request.input('employeeId', sql.NVarChar(50), employeeId);
+  try {
+    const request = pool.request();
+    request.input("employeeId", sql.NVarChar(50), employeeId);
 
-        const query = `
+    const query = `
             SELECT Reporting_Manager_Name AS managerName
             FROM dbo.Staffs
             WHERE Employee_ID_if_already_assigned = @employeeId;
         `;
 
-        const result = await request.query(query);
+    const result = await request.query(query);
 
-        if (result.recordset.length > 0) {
-            return res.json({ manager: result.recordset[0].managerName });
-        } else {
-            return res.status(404).json({ message: "No manager found for this employee ID." });
-        }
-    } catch (err) {
-        console.error("Error fetching manager details:", err);
-        res.status(500).json({
-            message: err.response?.data?.message || err.message || "Internal Server Error",
-        });
+    if (result.recordset.length > 0) {
+      return res.json({ manager: result.recordset[0].managerName });
+    } else {
+      return res
+        .status(404)
+        .json({ message: "No manager found for this employee ID." });
     }
+  } catch (err) {
+    console.error("Error fetching manager details:", err);
+    res.status(500).json({
+      message:
+        err.response?.data?.message || err.message || "Internal Server Error",
+    });
+  }
 }
 
 // Function to get all employee IDs and names
@@ -86,22 +89,31 @@ export async function getemployees(req, res) {
 
 // --- 1. Employee submits leave request ---
 export async function requestLeave(req, res) {
-    const leaveData = req.body;
-    console.log("Incoming body:", leaveData);
+  const leaveData = req.body;
+  console.log("Incoming body:", leaveData);
 
-    // Basic validation
-    if (!leaveData?.employeeId || !leaveData?.employeeName || !leaveData?.startDate || !leaveData?.endDate) {
-        return res.status(400).json({ message: "Incomplete leave data." });
-    }
+  // Basic validation
+  if (
+    !leaveData?.employeeId ||
+    !leaveData?.employeeName ||
+    !leaveData?.startDate ||
+    !leaveData?.endDate
+  ) {
+    return res.status(400).json({ message: "Incomplete leave data." });
+  }
 
-    const token = uuidv4(); // unique approval token
+  const token = uuidv4(); // unique approval token
 
-    try {
-        // Step 1: Get manager info
-        const mgrRequest = pool.request();
-        mgrRequest.input('employeeId', sql.NVarChar(50), leaveData.employeeId.trim());
+  try {
+    // Step 1: Get manager info
+    const mgrRequest = pool.request();
+    mgrRequest.input(
+      "employeeId",
+      sql.NVarChar(50),
+      leaveData.employeeId.trim()
+    );
 
-        const managerQuery = `
+    const managerQuery = `
             SELECT s1.Reporting_Manager_Name AS managerName,
                    s2.Official_Email_Address AS managerEmail
             FROM dbo.Staffs s1
@@ -110,55 +122,66 @@ export async function requestLeave(req, res) {
             WHERE s1.Employee_ID_if_already_assigned = @employeeId
         `;
 
-        const mgrResult = await mgrRequest.query(managerQuery);
+    const mgrResult = await mgrRequest.query(managerQuery);
 
-        // Ensure manager info exists
-        let managerName = "Manager"; // fallback
-        let managerEmail;
+    // Ensure manager info exists
+    let managerName = "Manager"; // fallback
+    let managerEmail;
 
-        if (mgrResult.recordset.length > 0) {
-            managerName = mgrResult.recordset[0].managerName || "Manager";
-            managerEmail = mgrResult.recordset[0].managerEmail;
-        }
+    if (mgrResult.recordset.length > 0) {
+      managerName = mgrResult.recordset[0].managerName || "Manager";
+      managerEmail = mgrResult.recordset[0].managerEmail;
+    }
 
-        if (!managerEmail) {
-            return res.status(404).json({ message: "Manager email not found." });
-        }
+    if (!managerEmail) {
+      return res.status(404).json({ message: "Manager email not found." });
+    }
 
-        // Step 2: Insert leave request into LeaveInfo
-        const request = pool.request();
-        request.input("employeeId", sql.NVarChar(50), leaveData.employeeId.trim());
-        request.input("employeeName", sql.NVarChar(100), leaveData.employeeName.trim());
-        request.input("managerName", sql.NVarChar(100), managerName.trim());
-        request.input("leaveType", sql.NVarChar(100), leaveData.leaveType || "");
-        request.input("startDate", sql.Date, leaveData.startDate);
-        request.input("endDate", sql.Date, leaveData.endDate);
-        request.input("totalDays", sql.Int, leaveData.totalDays || 0);
-        request.input("halfDay", sql.NVarChar(50), leaveData.halfDayOption || null);
-        request.input("leaveReason", sql.NVarChar(sql.MAX), leaveData.leaveReason || null);
-        request.input("supportingDocument", sql.VarBinary(sql.MAX), leaveData.supportingDocument || null);
-        request.input("status", sql.NVarChar(50), "Pending");
-        request.input("token", sql.NVarChar(100), token);
-        request.input("leaveStatus", sql.Int, 1); // 1 = Pending
+    // Step 2: Insert leave request into LeaveInfo
+    const request = pool.request();
+    request.input("employeeId", sql.NVarChar(50), leaveData.employeeId.trim());
+    request.input(
+      "employeeName",
+      sql.NVarChar(100),
+      leaveData.employeeName.trim()
+    );
+    request.input("managerName", sql.NVarChar(100), managerName.trim());
+    request.input("leaveType", sql.NVarChar(100), leaveData.leaveType || "");
+    request.input("startDate", sql.Date, leaveData.startDate);
+    request.input("endDate", sql.Date, leaveData.endDate);
+    request.input("totalDays", sql.Int, leaveData.totalDays || 0);
+    request.input("halfDay", sql.NVarChar(50), leaveData.halfDayOption || null);
+    request.input(
+      "leaveReason",
+      sql.NVarChar(sql.MAX),
+      leaveData.leaveReason || null
+    );
+    request.input(
+      "supportingDocument",
+      sql.VarBinary(sql.MAX),
+      leaveData.supportingDocument || null
+    );
+    request.input("status", sql.NVarChar(50), "Pending");
+    request.input("token", sql.NVarChar(100), token);
+    request.input("leaveStatus", sql.Int, 1); // 1 = Pending
 
-        await request.query(`
+    await request.query(`
             INSERT INTO LeaveInfo 
             (Employee_ID, Employee_Name, Manager_Name, Leave_Type, Leave_Start_Date, Leave_End_Date, Total_Days, Half_Day, LeaveReason, SupportingDocument, Status, Leave_Status, ApprovalToken)
             VALUES (@employeeId, @employeeName, @managerName, @leaveType, @startDate, @endDate, @totalDays, @halfDay, @leaveReason, @supportingDocument, @status, @leaveStatus, @token)
         `);
 
-        // Step 3: Send email to manager
-        leaveData.managerName = managerName; // ensure property name matches sendHRMail
-        const employeeId = leaveData.employeeId; // ensure employee email is passed
-        await sendHRMail(managerEmail,employeeId,leaveData, token);
-        console.log("✅ Leave email sent to manager successfully!");
+    // Step 3: Send email to manager
+    leaveData.managerName = managerName; // ensure property name matches sendHRMail
+    const employeeId = leaveData.employeeId; // ensure employee email is passed
+    await sendHRMail(managerEmail, employeeId, leaveData, token);
+    console.log("✅ Leave email sent to manager successfully!");
 
-        res.status(200).json({ message: "Leave request submitted successfully." });
-
-    } catch (err) {
-        console.error("Error submitting leave:", err);
-        return res.status(500).json({ message: "Server error." });
-    }
+    res.status(200).json({ message: "Leave request submitted successfully." });
+  } catch (err) {
+    console.error("Error submitting leave:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
 }
 
 // --- 2. Approve Leave ---
@@ -282,18 +305,21 @@ export async function approveLeave(req, res) {
 </body>
 </html>
 `);
-    };
+    }
 
     const leave = result.recordset[0];
 
     // ✅ Check if leave is still pending
-    if (leave.Leave_Status !== 1) { // 1 = Pending
-      return res.status(400).send("This leave request has already been processed.");
+    if (leave.Leave_Status !== 1) {
+      // 1 = Pending
+      return res
+        .status(400)
+        .send("This leave request has already been processed.");
     }
 
     // Step 2: Fetch employee's official email from Staffs table
     const empRequest = pool.request();
-    empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
+    empRequest.input("employeeId", sql.NVarChar(50), leave.Employee_ID);
 
     const empEmailQuery = `
       SELECT 
@@ -304,14 +330,17 @@ export async function approveLeave(req, res) {
 
     const empResult = await empRequest.query(empEmailQuery);
 
-    if (empResult.recordset.length === 0 || !empResult.recordset[0].employeeEmail) {
+    if (
+      empResult.recordset.length === 0 ||
+      !empResult.recordset[0].employeeEmail
+    ) {
       console.warn("⚠️ Employee email not found in Staffs table.");
     }
 
     const employeeEmail = empResult.recordset[0]?.employeeEmail;
 
     // Step 3: Update leave status to Approved
-     await request.query(`
+    await request.query(`
   UPDATE LeaveInfo 
   SET Status = 'Approved', Leave_Status = 2 ,ApprovalToken = NULL
   WHERE ApprovalToken = @token
@@ -445,27 +474,31 @@ export async function approveLeave(req, res) {
 
 </html>
 `);
-
   } catch (err) {
     console.error("Error approving leave:", err);
     res.status(500).send("Server error.");
   }
 }
 
-
 // --- 3a. Show reject form ---
 export async function rejectLeave(req, res) {
-    const { token } = req.params;
-    const { reason } = req.body;
+  const { token } = req.params;
+  const { reason } = req.body;
 
-    try {
-        const request = pool.request();
-        request.input("token", sql.NVarChar(100), token);
-        request.input("reason", sql.NVarChar(sql.MAX), reason || "No reason provided");
+  try {
+    const request = pool.request();
+    request.input("token", sql.NVarChar(100), token);
+    request.input(
+      "reason",
+      sql.NVarChar(sql.MAX),
+      reason || "No reason provided"
+    );
 
-        const result = await request.query(`SELECT * FROM LeaveInfo WHERE ApprovalToken = @token`);
+    const result = await request.query(
+      `SELECT * FROM LeaveInfo WHERE ApprovalToken = @token`
+    );
 
-        if (result.recordset.length === 0) {
+    if (result.recordset.length === 0) {
       return res.status(404).send(`
 <!DOCTYPE html>
 <html lang="en">
@@ -571,45 +604,46 @@ export async function rejectLeave(req, res) {
     </div>
 </body>
 </html>
-`);        };
+`);
+    }
 
-        const leave = result.recordset[0];
+    const leave = result.recordset[0];
 
-        const empRequest = pool.request();
-        empRequest.input('employeeId', sql.NVarChar(50), leave.Employee_ID);
-const empResult = await empRequest.query(`
+    const empRequest = pool.request();
+    empRequest.input("employeeId", sql.NVarChar(50), leave.Employee_ID);
+    const empResult = await empRequest.query(`
     SELECT 
         COALESCE(Official_Email_Address, Personal_Email_Address) AS employeeEmail
     FROM dbo.Staffs
     WHERE Employee_ID_if_already_assigned = @employeeId
 `);
-        const employeeEmail = empResult.recordset[0]?.employeeEmail;
+    const employeeEmail = empResult.recordset[0]?.employeeEmail;
 
-        await request.query(`
+    await request.query(`
             UPDATE LeaveInfo
             SET Status = 'Rejected', Leave_Status = 3, Rejection_Reason = @reason, ApprovalToken = NULL
             WHERE ApprovalToken = @token
         `);
 
-        if (employeeEmail) {
-            await sendEmployeeNotificationMail(
-                employeeEmail,
-                {
-                    employeeName: leave.Employee_Name,
-                    managerName: leave.Manager_Name,
-                    startDate: leave.Leave_Start_Date,
-                    endDate: leave.Leave_End_Date,
-                    leaveType: leave.Leave_Type,
-                    totalDays: leave.Total_Days,
-                    leaveReason: leave.LeaveReason,
-                    rejectionReason: reason || "No reason provided",
-                },
-                "Rejected"
-            );
-        }
+    if (employeeEmail) {
+      await sendEmployeeNotificationMail(
+        employeeEmail,
+        {
+          employeeName: leave.Employee_Name,
+          managerName: leave.Manager_Name,
+          startDate: leave.Leave_Start_Date,
+          endDate: leave.Leave_End_Date,
+          leaveType: leave.Leave_Type,
+          totalDays: leave.Total_Days,
+          leaveReason: leave.LeaveReason,
+          rejectionReason: reason || "No reason provided",
+        },
+        "Rejected"
+      );
+    }
 
-        // Send rejection page with a clear red X
-        res.send(`
+    // Send rejection page with a clear red X
+    res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -708,15 +742,11 @@ a.button:hover { background-color: #1d4ed8; }
 </body>
 </html>
         `);
-
-    } catch (err) {
-        console.error("Error rejecting leave:", err);
-        res.status(500).send("Server error.");
-    }
+  } catch (err) {
+    console.error("Error rejecting leave:", err);
+    res.status(500).send("Server error.");
+  }
 }
-
-
-
 
 // --- 3b. Show reject form ---
 export async function rejectLeaveForm(req, res) {
@@ -866,7 +896,7 @@ export async function rejectLeaveForm(req, res) {
     </div>
     <h2>Reject Leave Application</h2>
     <p>Please provide a reason for rejecting this leave request. This reason will be shared with the employee.</p>
-    <form method="POST" action="/internLeave/reject/${token}">
+    <form method="POST" action="/internLeaveRequest/reject/${token}">
       <label for="reason">Rejection Reason</label>
       <textarea id="reason" name="reason" rows="4" required placeholder="Enter Reason for Rejection"></textarea>
       <br/>
@@ -878,11 +908,6 @@ export async function rejectLeaveForm(req, res) {
 </html>
   `);
 }
-
-
-
-
-
 
 // Function to send email to manager with Approve/Reject links
 async function sendHRMail(to, employeeId, leave, token) {
@@ -910,7 +935,10 @@ async function sendHRMail(to, employeeId, leave, token) {
       .input("employeeId", employeeId)
       .query(empEmailQuery);
 
-    if (empResult.recordset.length === 0 || !empResult.recordset[0].employeeEmail) {
+    if (
+      empResult.recordset.length === 0 ||
+      !empResult.recordset[0].employeeEmail
+    ) {
       console.warn(`⚠️ Employee email not found for ID: ${employeeId}`);
     } else {
       employeeEmail = empResult.recordset[0].employeeEmail;
@@ -927,11 +955,15 @@ async function sendHRMail(to, employeeId, leave, token) {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
         <p><b>Dear ${leave.managerName},</b></p>
-        <p><b>${leave.employeeName}</b> (Employee ID: <b>${leave.employeeId}</b>) has applied for leave.</p>
+        <p><b>${leave.employeeName}</b> (Employee ID: <b>${
+      leave.employeeId
+    }</b>) has applied for leave.</p>
 
         <ul>
           <li><b>Leave Type:</b> ${leave.leaveType}</li>
-          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
+          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
+      leave.totalDays
+    } days)</li>
           <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
           <li><b>Submitted On:</b> ${submittedOn}</li>
         </ul>
@@ -955,10 +987,14 @@ async function sendHRMail(to, employeeId, leave, token) {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
         <p><b>Dear HR Team,</b></p>
-        <p>A leave request has been submitted by <b>${leave.employeeName}</b> (Employee ID: ${leave.employeeId}).</p>
+        <p>A leave request has been submitted by <b>${
+          leave.employeeName
+        }</b> (Employee ID: ${leave.employeeId}).</p>
         <ul>
           <li><b>Leave Type:</b> ${leave.leaveType}</li>
-          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
+          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
+      leave.totalDays
+    } days)</li>
           <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
           <li><b>Submitted On:</b> ${submittedOn}</li>
           <li><b>Reporting Manager:</b> ${leave.managerName}</li>
@@ -981,11 +1017,15 @@ async function sendHRMail(to, employeeId, leave, token) {
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
             <p><b>Dear ${leave.employeeName},</b></p>
-            <p>Your leave application has been successfully submitted and sent to your manager (<b>${leave.managerName}</b>) for approval.</p>
+            <p>Your leave application has been successfully submitted and sent to your manager (<b>${
+              leave.managerName
+            }</b>) for approval.</p>
 
             <ul>
               <li><b>Leave Type:</b> ${leave.leaveType}</li>
-              <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${leave.totalDays} days)</li>
+              <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
+          leave.totalDays
+        } days)</li>
               <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
               <li><b>Submitted On:</b> ${submittedOn}</li>
             </ul>
@@ -1011,7 +1051,8 @@ async function sendHRMail(to, employeeId, leave, token) {
 
     console.log(`✅ Manager mail sent: ${results[0].response}`);
     console.log(`✅ HR mail sent: ${results[1].response}`);
-    if (employeeMail) console.log(`✅ Employee mail sent: ${results[2].response}`);
+    if (employeeMail)
+      console.log(`✅ Employee mail sent: ${results[2].response}`);
 
     return true;
   } catch (err) {
@@ -1019,8 +1060,6 @@ async function sendHRMail(to, employeeId, leave, token) {
     return false;
   }
 }
-
-
 
 // Function to send email notification to the employee after manager's approval/rejection
 async function sendEmployeeNotificationMail(to, leave, status) {
@@ -1041,30 +1080,30 @@ async function sendEmployeeNotificationMail(to, leave, status) {
   // Leave type labels
   // ---------------------------------
   const leaveTypeLabels = {
-     "CL": "Casual Leave (CL)",
-    "SL": "Sick Leave (SL)",
-    "EL": "Earned Leave (EL)",
+    CL: "Casual Leave (CL)",
+    SL: "Sick Leave (SL)",
+    EL: "Earned Leave (EL)",
     "Comp-off": "Compensatory Off (Comp-off)",
-    "Other": "Other"
+    Other: "Other",
   };
 
   // ---------------------------------
   // Approved and Rejected messages
   // ---------------------------------
   const leaveMessages = {
-    "CL": {
+    CL: {
       approved:
         "Please make sure any pending work is handled or updated before your leave. Hope you enjoy your time away.",
       rejected:
         "Your casual leave request could not be approved at this time. You may discuss alternate dates with your manager if required.",
     },
-    "SL": {
+    SL: {
       approved:
         "Take the rest you need and focus on getting better. Wishing you a quick recovery — HR has been notified.",
       rejected:
         "Your sick leave request has not been approved. Please reach out to your manager if you wish to discuss this further.",
     },
-    "EL": {
+    EL: {
       approved:
         "Ensure your ongoing tasks are wrapped up or handed over before you leave. Enjoy your well-earned break.",
       rejected:
@@ -1076,7 +1115,7 @@ async function sendEmployeeNotificationMail(to, leave, status) {
       rejected:
         "Your compensatory off request was not approved. Please verify eligibility or discuss with your manager.",
     },
-    "Other": {
+    Other: {
       approved:
         "We understand your situation and appreciate you informing us. Please take the time you need — HR has been notified for records.",
       rejected:
@@ -1113,10 +1152,10 @@ async function sendEmployeeNotificationMail(to, leave, status) {
       }
 
       <p>${
-        console.log('kuyuu',leave.leaveType),
+        (console.log("kuyuu", leave.leaveType),
         leaveMessages[leave.leaveType]
           ? leaveMessages[leave.leaveType][isApproved ? "approved" : "rejected"]
-          : leaveMessages["Other"][isApproved ? "approved" : "rejected"]
+          : leaveMessages["Other"][isApproved ? "approved" : "rejected"])
       }</p>
     
 
@@ -1147,8 +1186,3 @@ async function sendEmployeeNotificationMail(to, leave, status) {
     return false;
   }
 }
-
-
-
-
-
