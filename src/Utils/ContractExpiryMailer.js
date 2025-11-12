@@ -106,14 +106,15 @@ async function getLogsExpiringInFifteenDays() {
 }
 
 
-const transporter=mailer.createTransport({
-   service: 'gmail',
-   auth:{
-       user:process.env.EMAIL_SENDER,
-       pass:process.env.EMAIL_PASSWORD
-   }
+const transporter = mailer.createTransport({
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_SENDER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
-
 
 async function getMails(){
     try{

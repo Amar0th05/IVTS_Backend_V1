@@ -3,10 +3,12 @@ const mailer = require("nodemailer");
  
 // Create transporter (Nodemailer)
 const transporter = mailer.createTransport({
-  service: "gmail",
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_SENDER, // your email
-    pass: process.env.EMAIL_PASSWORD, // app password (not real Gmail password)
+    user: process.env.EMAIL_SENDER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 let pool;

@@ -2,8 +2,8 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-export const transporter = nodemailer.createTransport({
-  host: "gmail",
+const transporter = nodemailer.createTransport({
+  host: "smtp.office365.com",
   port: 587,
   secure: false,
   auth: {
