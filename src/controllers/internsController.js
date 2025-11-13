@@ -353,6 +353,7 @@ async function getAllIntern(req, res) {
     const query = `
       SELECT
         [Id], -- add a PK for identifying records
+        [internId],
         [FullName],
         [DateOfBirth],
         [Gender],
