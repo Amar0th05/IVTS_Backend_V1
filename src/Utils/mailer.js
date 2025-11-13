@@ -3,15 +3,14 @@ require('dotenv').config();
 const {sql,getPool} = require('../config/dbconfig')
 
 
-const transporter=mailer.createTransport({
-    // host: "smtp.office365.com",
-    // port: 587,
-    // secure: false,
-    service: 'gmail',
-    auth:{
-        user:process.env.EMAIL_SENDER,
-        pass:process.env.EMAIL_PASSWORD,
-    }
+const transporter = mailer.createTransport({
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_SENDER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
 
 const sendResetMail=async(email,token)=>{

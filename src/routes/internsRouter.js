@@ -11,6 +11,7 @@ const {
   toggleInternStatus,
   createIntern,
   getReportingManager,
+  generateDate,
 
 } = require('../controllers/internsController');
 
@@ -54,6 +55,7 @@ internsRouter.delete('/:internId/documents/:docName', deleteDocument);
 internsRouter.post('/:internId/documents/:docName', upload.single('file'), uploadDocument);
 internsRouter.put('/status/:id', toggleInternStatus);
 internsRouter.get('/:id', getInternById);
+internsRouter.post('/generateDate/:id',generateDate);
 
 
 

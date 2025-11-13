@@ -62,6 +62,7 @@ const {assetsRouter} = require("./routes/assetsRouter");
 const {InternLeaveRouter}= require("./routes/InternLeaveRouter");
 const {LeaveManageRouter}=require('./routes/LeaveManageRouter');
 
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors({
     origin: process.env.CLIENT_URL,
@@ -70,10 +71,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(logger);
+
 connectToDB();
 
 app.use(async (req, res, next) => {
-  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/assets/details') && !req.path.startsWith('/internLeaveRequest/') && !req.path.startsWith('/internLeave/')) {
+  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') &&  !req.path.startsWith('/assets/details') && !req.path.startsWith('/internLeaveRequest/') && !req.path.startsWith('/internLeave/')) {
     try {
       await authMiddleware(req, res, next);
     } catch (error) {
