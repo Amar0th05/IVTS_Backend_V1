@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+
 const {
   getAllIntern,
   getInternById,
@@ -26,7 +27,7 @@ internsRouter.post(
   upload.fields([
     { name: 'resume', maxCount: 1 },
     { name: 'photo', maxCount: 1 },
-    { name: 'idProof', maxCount: 1 },
+    { name: 'aadhar', maxCount: 1 },
     { name: 'bonafide', maxCount: 1 },
   ]),
   createIntern
@@ -38,7 +39,7 @@ internsRouter.put(
   upload.fields([
     { name: 'resume', maxCount: 1 },
     { name: 'photo', maxCount: 1 },
-    { name: 'idProof', maxCount: 1 },
+    { name: 'aadhar', maxCount: 1 },
     { name: 'bonafide', maxCount: 1 }
   ]),
   updateinternDetails

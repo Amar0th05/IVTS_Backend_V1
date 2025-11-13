@@ -81,7 +81,7 @@ async function createIntern(req, res) {
     request.input(
       "IdProofFile",
       sql.VarBinary(sql.MAX),
-      files?.idProof?.[0]?.buffer || null
+      files?.aadhar?.[0]?.buffer || null
     );
     // Run query
     await request.query(`
@@ -243,7 +243,7 @@ async function createIntern(req, res) {
     request.input(
       "IdProofFile",
       sql.VarBinary(sql.MAX),
-      files?.idProof?.[0]?.buffer || null
+      files?.aadhar?.[0]?.buffer || null
     );
  
  
@@ -373,8 +373,8 @@ async function getAllIntern(req, res) {
         [InternshipMode],
         [HowHeardAboutUs],
         [SubmissionDate],
-        [status]
-        -- do not select VARBINARY here to avoid huge payload
+        [status],
+        [stipend] AS stipendAmount
       FROM dbo.internApplicants
     `;
  
@@ -409,6 +409,7 @@ async function getInternById(req, res) {
     const query = `
              SELECT
              [id],
+             [internId],
         [FullName],
         [DateOfBirth],
         [Gender],
@@ -433,8 +434,8 @@ async function getInternById(req, res) {
         [SubmissionDate],
         [Reporting_Manager],
         [Acceptance_GenerateDate],
-        [Completion_GenerateDate]
-        -- do not select VARBINARY here to avoid huge payload
+        [Completion_GenerateDate],
+        [stipend] AS stipendAmount
       FROM dbo.internApplicants
       WHERE Id = @interId;
     `;
@@ -593,6 +594,15 @@ async function updateinternDetails(req, res) {
       request.input("Reporting_Manager", sql.NVarChar(150), data.reportingManager);
     }
 
+      if (data.stipendAmount !== undefined  && data.stipendAmount == "") {
+      updates.push("stipend = @stipend");
+      request.input("stipend", sql.NVarChar(150), null);
+    }
+    else{
+      updates.push("stipend = @stipend");
+      request.input("stipend", sql.NVarChar(150), data.stipendAmount);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ message: "No fields provided for update" });
     }
@@ -696,7 +706,7 @@ async function getMetadata(req, res) {
   { name: "Bonafide", exists: false },
   { name: "Resume", exists: false },
   { name: "Photo", exists: false },
-  { name: "IdProof", exists: false },
+  { name: "Aadhar", exists: false },
 ];
  
       return res.json(metadata);
@@ -709,7 +719,7 @@ async function getMetadata(req, res) {
       { name: "Bonafide", exists: row.BonafideFileData === 1 },
       { name: "Resume", exists: row.ResumeFileData === 1 },
       { name: "Photo", exists: row.PhotoFileData === 1 },
-      { name: "IdProof", exists: row.IdProofFileData === 1 },
+      { name: "Aadhar", exists: row.IdProofFileData === 1 },
     ];
  
     res.json(metadata);
@@ -724,7 +734,7 @@ const documentColumnMap = {
   Bonafide: "BonafideFileData",
   Resume: "ResumeFileData",
   Photo: "PhotoFileData",
-  IdProof: "IdProofFileData",
+  Aadhar: "IdProofFileData",
 };
  
  
@@ -756,9 +766,11 @@ async function downloadDocument(req, res) {
     }
  
     const fileBuffer = result.recordset[0].DocumentData;
+    console.log(fileBuffer,"file");
  
     // Set headers for PDF file download
-    if(docName=="Photo" || docName=="IdProof"){
+    
+    if(docName =="Photo"){
       res.setHeader("Content-Disposition", `attachment; filename=${docName}.png`);
       res.setHeader("Content-Type", "image/png");
       console.log("photo downloaded");
@@ -767,7 +779,6 @@ async function downloadDocument(req, res) {
     res.setHeader("Content-Disposition", `attachment; filename=${docName}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
     console.log("pdf downloaded");
-
     }
     // Send the PDF binary data as the response
     res.send(fileBuffer);
@@ -922,6 +933,34 @@ async function generateDate(req, res) {
     });
   }
 }
+
+
+// stipendAmount
+// app.post("/api/save-stipend", async (req, res) => {
+//   try {
+//     const { stipendAmount } = req.body;
+
+//     // insert or update your DB record
+//     const query = `
+//       INSERT INTO InternDetails (StipendAmount)
+//       VALUES (${stipendAmount === null ? 'NULL' : stipendAmount})
+//     `;
+
+//     await pool.request().query(query);
+
+//     res.status(200).json({
+//       message: "Stipend saved successfully",
+//       stipend: stipendAmount
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Database error" });
+//   }
+// });
+
+
+
 module.exports = {
   getAllIntern,
   getInternById,
