@@ -74,11 +74,13 @@ async function getIndentCreatedMails() {
 
 // Create transporter (Nodemailer)
 const transporter = mailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_SENDER, // your email
-        pass: process.env.EMAIL_PASSWORD// app password (not real Gmail password)
-    }
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_SENDER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
 
 // send mail

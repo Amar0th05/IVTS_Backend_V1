@@ -5,10 +5,12 @@ import { v4 as uuidv4 } from "uuid";
 
 // Configure Gmail transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_SENDER,
-    pass: process.env.EMAIL_PASSWORD, // app password
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
@@ -58,33 +60,53 @@ export async function getManagerByEmployeeId(req, res) {
   }
 }
 
-// Function to get all employee IDs and names
+
 export async function getemployees(req, res) {
-  const { email } = req.params;
-  console.log("Fetching employee details for:", email);
-
+  console.log("Fetching employee details");
   try {
-    const request = pool.request();
+    const result = await pool.request().query(`
+            SELECT Employee_ID_if_already_assigned AS id,
+                   Staff_Name AS name
+            FROM dbo.Staffs
+            ORDER BY Employee_ID_if_already_assigned ASC
+        `);
 
-    // ✅ Correct variable name: 'email' (not 'emai')
-    request.input('email', sql.NVarChar, email);
-
-    const result = await request.query(`
-      SELECT 
-        Employee_ID_if_already_assigned AS id,
-        Staff_Name AS FullName,
-        Reporting_Manager_Name AS ManagerName
-      FROM dbo.Staffs
-      WHERE Personal_Email_Address = @email 
-         OR Official_Email_Address = @email
-    `);
-
-    res.json({ employees: result.recordset[0] });
+    res.json({ employees: result.recordset });
   } catch (err) {
     console.error("Error fetching staff:", err);
     res.status(500).json({ error: "Server error" });
   }
 }
+
+
+// Function to get all employee IDs and names
+// get managerName for leave 
+// export async function getemployees(req, res) {
+//   const { email } = req.params;
+//   console.log("Fetching employee details for:", email);
+
+//   try {
+//     const request = pool.request();
+
+//     // ✅ Correct variable name: 'email' (not 'emai')
+//     request.input('email', sql.NVarChar, email);
+
+//     const result = await request.query(`
+//       SELECT 
+//         Employee_ID_if_already_assigned AS id,
+//         Staff_Name AS FullName,
+//         Reporting_Manager_Name AS ManagerName
+//       FROM dbo.Staffs
+//       WHERE Personal_Email_Address = @email 
+//          OR Official_Email_Address = @email
+//     `);
+
+//     res.json({ employees: result.recordset[0] });
+//   } catch (err) {
+//     console.error("Error fetching staff:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// }
 
 
 // --- 1. Employee submits leave request ---
@@ -149,7 +171,7 @@ export async function requestLeave(req, res) {
     request.input("leaveType", sql.NVarChar(100), leaveData.leaveType || "");
     request.input("startDate", sql.Date, leaveData.startDate);
     request.input("endDate", sql.Date, leaveData.endDate);
-    request.input("totalDays", sql.Int, leaveData.totalDays || 0);
+    request.input("totalDays", sql.Float, leaveData.totalDays || 0);
     request.input("halfDay", sql.NVarChar(50), leaveData.halfDayOption || null);
     request.input(
       "leaveReason",
@@ -483,7 +505,8 @@ export async function approveLeave(req, res) {
 // --- 3a. Show reject form ---
 export async function rejectLeave(req, res) {
   const { token } = req.params;
-  const { reason } = req.body;
+  const { reason, Rejectreason } = req.body;
+  const finalReason = reason || Rejectreason || "";
 
   try {
     const request = pool.request();
@@ -491,12 +514,12 @@ export async function rejectLeave(req, res) {
     request.input(
       "reason",
       sql.NVarChar(sql.MAX),
-      reason || "No reason provided"
+      finalReason && finalReason.trim() !== "" ? finalReason.trim() : ""
     );
 
-    const result = await request.query(
-      `SELECT * FROM LeaveInfo WHERE ApprovalToken = @token`
-    );
+    const result = await request.query(`
+      SELECT * FROM LeaveInfo WHERE ApprovalToken = @token
+    `);
 
     if (result.recordset.length === 0) {
       return res.status(404).send(`
@@ -635,8 +658,12 @@ export async function rejectLeave(req, res) {
           endDate: leave.Leave_End_Date,
           leaveType: leave.Leave_Type,
           totalDays: leave.Total_Days,
+
           leaveReason: leave.LeaveReason,
-          rejectionReason: reason || "No reason provided",
+          rejectionReason:
+            finalReason && finalReason.trim() !== ""
+              ? finalReason.trim()
+              : "No reason provided",
         },
         "Rejected"
       );
@@ -897,8 +924,8 @@ export async function rejectLeaveForm(req, res) {
     <h2>Reject Leave Application</h2>
     <p>Please provide a reason for rejecting this leave request. This reason will be shared with the employee.</p>
     <form method="POST" action="/internLeaveRequest/reject/${token}">
-      <label for="reason">Rejection Reason</label>
-      <textarea id="reason" name="reason" rows="4" required placeholder="Enter Reason for Rejection"></textarea>
+      <label for="Rejectreason">Rejection Reason</label>
+      <textarea id="Rejectreason" name="Rejectreason" rows="4" required placeholder="Enter Reason for Rejection"></textarea>
       <br/>
       <button type="submit">Submit Rejection</button>
       <button type="button" class="cancel" onclick="window.history.back()">Cancel</button>
@@ -961,9 +988,14 @@ async function sendHRMail(to, employeeId, leave, token) {
 
         <ul>
           <li><b>Leave Type:</b> ${leave.leaveType}</li>
-          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
-      leave.totalDays
-    } days)</li>
+<li>
+  <b>Period:</b> ${formattedStart} to ${formattedEnd}
+  (${
+    leave.totalDays === 0.5
+      ? leave.halfDayOption
+      : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
+  })
+</li>
           <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
           <li><b>Submitted On:</b> ${submittedOn}</li>
         </ul>
@@ -992,9 +1024,14 @@ async function sendHRMail(to, employeeId, leave, token) {
         }</b> (Employee ID: ${leave.employeeId}).</p>
         <ul>
           <li><b>Leave Type:</b> ${leave.leaveType}</li>
-          <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
-      leave.totalDays
-    } days)</li>
+          <li>
+  <b>Period:</b> ${formattedStart} to ${formattedEnd}
+  (${
+    leave.totalDays === 0.5
+      ? leave.halfDayOption
+      : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
+  })
+</li>
           <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
           <li><b>Submitted On:</b> ${submittedOn}</li>
           <li><b>Reporting Manager:</b> ${leave.managerName}</li>
@@ -1023,9 +1060,14 @@ async function sendHRMail(to, employeeId, leave, token) {
 
             <ul>
               <li><b>Leave Type:</b> ${leave.leaveType}</li>
-              <li><b>Period:</b> ${formattedStart} to ${formattedEnd} (${
-          leave.totalDays
-        } days)</li>
+              <li>
+  <b>Period:</b> ${formattedStart} to ${formattedEnd}
+  (${
+    leave.totalDays === 0.5
+      ? leave.halfDayOption
+      : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
+  })
+</li>
               <li><b>Reason:</b> ${leave.leaveReason || "N/A"}</li>
               <li><b>Submitted On:</b> ${submittedOn}</li>
             </ul>
@@ -1137,7 +1179,11 @@ async function sendEmployeeNotificationMail(to, leave, status) {
 
       <p>
         Your <b>${leaveLabel}</b> request from <b>${formattedStart}</b> to <b>${formattedEnd}</b>
-        (<b>${leave.totalDays} days</b>) has been 
+        (<b>${
+    leave.totalDays === 0.5
+      ? leave.halfDayOption
+      : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
+  }</b>) has been 
         <span style="font-weight:bold;">${formattedStatus}</span>
         by <b>${leave.managerName}</b>.
       </p>

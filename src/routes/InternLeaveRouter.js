@@ -3,8 +3,9 @@ const sql = require('mssql');
 const { requestLeave,rejectLeaveForm,approveLeave,rejectLeave, getemployees, getManagerByEmployeeId } = require('../controllers/InternLeaveController');
 const InternLeaveRouter = express.Router();
 
+InternLeaveRouter.get('/getemployees', getemployees);
 // GET employee list (for dropdown)
-InternLeaveRouter.get('/getemployees/:email', getemployees);
+// InternLeaveRouter.get('/getemployees/:email', getemployees);
 
 
 
