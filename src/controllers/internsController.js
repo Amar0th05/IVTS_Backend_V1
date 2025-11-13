@@ -195,6 +195,7 @@ async function createIntern(req, res) {
   try {
     const data = req.body;
     const files = req.files;
+    const email=data.email;
  
     const request = pool.request();
     request.input("FullName", sql.NVarChar, data.fullName);
@@ -269,8 +270,7 @@ async function createIntern(req, res) {
  
     // Send mail to HR
     await sendHRMail(
-      "vasan.gk@ntcpwc.iitm.ac.in",
-     
+      email,
       data
     );
  
