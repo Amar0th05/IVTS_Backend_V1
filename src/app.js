@@ -73,7 +73,7 @@ app.use(logger);
 connectToDB();
 
 app.use(async (req, res, next) => {
-  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/assets/details') && !req.path.startsWith('/internLeaveRequest/')) {
+  if (!req.path.startsWith('/auth') && !req.path.startsWith('/password') && !req.path.startsWith('/internship/apply') && !req.path.startsWith('/assets/details') && !req.path.startsWith('/internLeaveRequest/') && !req.path.startsWith('/internLeave/')) {
     try {
       await authMiddleware(req, res, next);
     } catch (error) {

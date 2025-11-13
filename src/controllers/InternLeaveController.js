@@ -3,12 +3,14 @@ import { sql, getPool } from "../config/dbconfig.js";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 
-// Configure Gmail transporter
+// Microsoft 365 / Outlook
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.office365.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_SENDER,
-    pass: process.env.EMAIL_PASSWORD, // app password
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
