@@ -121,7 +121,7 @@ async function createIntern(req, res) {
  
     // Send mail to HR
     await sendHRMail(
-      "vasan.gk@ntcpwc.iitm.ac.in",
+      process.env.HR_CC_EMAIL,
       data
     );
  
@@ -892,11 +892,9 @@ async function getReportingManager(req, res) {
                 [dbo].[Staffs]
             WHERE
                 [Designation] IN (
-                    'Project Manager',
                     'Project Officer',
-                    'Senior Project Officer',
                     'Principal Project Officer',
-                    'Principal Scientific'
+                    'Senior Project officer'
                 );
     `);
 
