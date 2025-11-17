@@ -29,6 +29,6 @@ router.delete('/:staffId/documents/:docName', deleteDocument);
 router.post('/:staffId/documents/:docName', upload.single('file'), uploadDocument);
 router.post("/insurance", addInsurance);
 router.put("/insurance/:id", updateInsurance);
-router.delete("insurance/:id", deleteInsurance);
+router.delete("/insurance/:id", deleteInsurance);
 
 module.exports = {staffDetailsRouter: router};
