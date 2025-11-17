@@ -938,8 +938,8 @@ export async function rejectLeaveForm(req, res) {
 
 // Function to send email to manager with Approve/Reject links
 async function sendHRMail(to, employeeId, leave, token) {
-    // const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
-  const baseUrl = process.env.BASE_URL || "http://localhost:5500";
+    const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
+  // const baseUrl = process.env.BASE_URL || "http://localhost:5500";
   const approveUrl = `${baseUrl}/internLeaveRequest/approve/${token}`;
   const rejectUrl = `${baseUrl}/internLeaveRequest/reject/${token}`;
 
