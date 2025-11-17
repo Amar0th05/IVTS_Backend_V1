@@ -892,11 +892,9 @@ async function getReportingManager(req, res) {
                 [dbo].[Staffs]
             WHERE
                 [Designation] IN (
-                    'Project Manager',
-                    'Project Officer',
-                    'Senior Project Officer',
+                    'Senior Project officer',
                     'Principal Project Officer',
-                    'Principal Scientific'
+                    'Project Officer',   
                 );
     `);
 
