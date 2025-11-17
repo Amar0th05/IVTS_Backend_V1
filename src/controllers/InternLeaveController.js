@@ -3,7 +3,7 @@ import { sql, getPool } from "../config/dbconfig.js";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 
-// Configure Gmail transporter
+// Microsoft 365 / Outlook
 const transporter = nodemailer.createTransport({
   host: "smtp.office365.com",
   port: 587,
@@ -112,7 +112,7 @@ export async function getemployees(req, res) {
 // --- 1. Employee submits leave request ---
 export async function requestLeave(req, res) {
   const leaveData = req.body;
-  console.log("Incoming body:", leaveData);
+  const file=req.file;
 
   // Basic validation
   if (
@@ -181,7 +181,7 @@ export async function requestLeave(req, res) {
     request.input(
       "supportingDocument",
       sql.VarBinary(sql.MAX),
-      leaveData.supportingDocument || null
+      file ? file.buffer : null
     );
     request.input("status", sql.NVarChar(50), "Pending");
     request.input("token", sql.NVarChar(100), token);
@@ -938,8 +938,8 @@ export async function rejectLeaveForm(req, res) {
 
 // Function to send email to manager with Approve/Reject links
 async function sendHRMail(to, employeeId, leave, token) {
-    // const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
-  const baseUrl = process.env.BASE_URL || "http://localhost:5500";
+    const baseUrl = process.env.BASE_URL || "https://ntcpwcit.in/worksphere/api";
+  // const baseUrl = process.env.BASE_URL || "http://localhost:5500";
   const approveUrl = `${baseUrl}/internLeaveRequest/approve/${token}`;
   const rejectUrl = `${baseUrl}/internLeaveRequest/reject/${token}`;
 
@@ -991,7 +991,7 @@ async function sendHRMail(to, employeeId, leave, token) {
 <li>
   <b>Period:</b> ${formattedStart} to ${formattedEnd}
   (${
-    leave.totalDays === 0.5
+    leave.totalDays === "0.5"
       ? leave.halfDayOption
       : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
   })
@@ -1027,7 +1027,7 @@ async function sendHRMail(to, employeeId, leave, token) {
           <li>
   <b>Period:</b> ${formattedStart} to ${formattedEnd}
   (${
-    leave.totalDays === 0.5
+    leave.totalDays === "0.5"
       ? leave.halfDayOption
       : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
   })
@@ -1063,7 +1063,7 @@ async function sendHRMail(to, employeeId, leave, token) {
               <li>
   <b>Period:</b> ${formattedStart} to ${formattedEnd}
   (${
-    leave.totalDays === 0.5
+    leave.totalDays === "0.5"
       ? leave.halfDayOption
       : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
   })
@@ -1180,7 +1180,7 @@ async function sendEmployeeNotificationMail(to, leave, status) {
       <p>
         Your <b>${leaveLabel}</b> request from <b>${formattedStart}</b> to <b>${formattedEnd}</b>
         (<b>${
-    leave.totalDays === 0.5
+    leave.totalDays === "0.5"
       ? leave.halfDayOption
       : `${leave.totalDays} ${leave.totalDays === 1 ? 'day' : 'days'}`
   }</b>) has been 

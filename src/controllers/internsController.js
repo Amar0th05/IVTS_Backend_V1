@@ -121,7 +121,7 @@ async function createIntern(req, res) {
  
     // Send mail to HR
     await sendHRMail(
-      "vasan.gk@ntcpwc.iitm.ac.in",
+      process.env.HR_CC_EMAIL,
       data
     );
  
@@ -269,8 +269,7 @@ async function createIntern(req, res) {
  
     // Send mail to HR
     await sendHRMail(
-      "vasan.gk@ntcpwc.iitm.ac.in",
-     
+      process.env.HR_CC_EMAIL,
       data
     );
  
@@ -353,6 +352,7 @@ async function getAllIntern(req, res) {
     const query = `
       SELECT
         [Id], -- add a PK for identifying records
+        [internId],
         [FullName],
         [DateOfBirth],
         [Gender],
@@ -892,9 +892,9 @@ async function getReportingManager(req, res) {
                 [dbo].[Staffs]
             WHERE
                 [Designation] IN (
-                    'Senior Project officer',
+                    'Project Officer',
                     'Principal Project Officer',
-                    'Project Officer',   
+                    'Senior Project officer'
                 );
     `);
 

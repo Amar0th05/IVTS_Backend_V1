@@ -52,6 +52,16 @@ async function registerUser(req, res) {
       return res.status(400).json({ message: "Invalid email address" });
     }
 
+        // ✅ Check if user is a staff member
+    const checkRequest = pool.request();
+    checkRequest.input("mail", sql.NVarChar(320), userInstance.mail);
+    const staffQuery = `SELECT 1 FROM [dbo].[Staffs] WHERE Official_Email_Address = @mail`;
+    const staffResult = await checkRequest.query(staffQuery);
+
+    if (staffResult.recordset.length === 0){
+    return res.status(404).json({ message: "User Not a Staff" });
+    }
+
     request.input("name", sql.NVarChar(30), userInstance.name);
     request.input("mail", sql.NVarChar(320), userInstance.mail);
     request.input("password", sql.NVarChar(255), userInstance.password);

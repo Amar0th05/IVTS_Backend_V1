@@ -1,7 +1,12 @@
 const express = require('express');
 const sql = require('mssql');
+const multer = require('multer');
+
 const { requestLeave,rejectLeaveForm,approveLeave,rejectLeave, getemployees, getManagerByEmployeeId } = require('../controllers/InternLeaveController');
 const InternLeaveRouter = express.Router();
+
+const storage=multer.memoryStorage();
+const upload = multer({storage});
 
 InternLeaveRouter.get('/getemployees', getemployees);
 // GET employee list (for dropdown)
@@ -10,7 +15,7 @@ InternLeaveRouter.get('/getemployees', getemployees);
 
 
 // --- Step 1: Employee submits leave request (email goes to HR) ---
-InternLeaveRouter.post("/request", requestLeave);
+InternLeaveRouter.post("/request", upload.single("documentUpload"),requestLeave);
 
 
 
