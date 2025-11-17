@@ -212,9 +212,29 @@ const documentColumns = [
   'GMDSSCertificateFile', 'IALACertificateFile'
 ];
 
-/**
- * Get document metadata (which files exist)
- */
+function getNameMap(reverse = false) {
+  const map = {
+    ResumeFile: "Resume",
+    AadhaarFile: "Aadhaar",
+    PANFile: "PAN",
+    AcademicCertificateFile: "Academic Certificate",
+    IDCardFile: "ID Card",
+    TenthCertificateFile: "SSLC Certificate",
+    TwelfthCertificateFile: "HLC Certificate",
+    GMDSSCertificateFile: "GMDSS Certificate",
+    IALACertificateFile: "IALA Certificate"
+  };
+
+  if (!reverse) return map;
+
+  // Create reverse mapping (display -> DB column)
+  const reversed = {};
+  for (const [dbName, displayName] of Object.entries(map)) {
+    reversed[displayName] = dbName;
+  }
+  return reversed;
+}
+
 async function getMetadata(req, res) {
   const personID = req.params.id;
 
@@ -234,8 +254,10 @@ async function getMetadata(req, res) {
     }
 
     const row = result.recordset[0];
+    const nameMap = getNameMap();
+
     const metadata = documentColumns.map(col => ({
-      name: col,
+      name: nameMap[col] || col,
       exists: row[`has${col}`] === 1
     }));
 
@@ -246,13 +268,13 @@ async function getMetadata(req, res) {
   }
 }
 
-/**
- * Download a document
- */
 async function downloadDocument(req, res) {
   const { personID, docName } = req.params;
 
-  if (!documentColumns.includes(docName)) {
+  const reverseMap = getNameMap(true);
+  const dbColumn = reverseMap[docName] || docName;
+
+  if (!documentColumns.includes(dbColumn)) {
     return res.status(400).json({ message: 'Invalid document name' });
   }
 
@@ -260,7 +282,7 @@ async function downloadDocument(req, res) {
     const request = pool.request();
     request.input('personID', sql.NVarChar, personID);
 
-    const query = `SELECT ${docName} AS DocumentData FROM dbo.talentpool WHERE personID = @personID`;
+    const query = `SELECT ${dbColumn} AS DocumentData FROM dbo.talentpool WHERE personID = @personID`;
     const result = await request.query(query);
 
     if (result.recordset.length === 0 || !result.recordset[0].DocumentData) {
@@ -286,7 +308,11 @@ async function uploadDocument(req, res) {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
-  if (!documentColumns.includes(docName)) {
+
+  const reverseMap = getNameMap(true);
+  const dbColumn = reverseMap[docName] || docName;
+
+  if (!documentColumns.includes(dbColumn)) {
     return res.status(400).json({ message: 'Invalid document name' });
   }
 
@@ -295,7 +321,7 @@ async function uploadDocument(req, res) {
     request.input('personID', sql.NVarChar, personID);
     request.input('fileData', sql.VarBinary(sql.MAX), req.file.buffer);
 
-    const query = `UPDATE dbo.talentpool SET ${docName} = @fileData WHERE personID = @personID`;
+    const query = `UPDATE dbo.talentpool SET ${dbColumn} = @fileData WHERE personID = @personID`;
     const result = await request.query(query);
 
     if (result.rowsAffected[0] > 0) {
@@ -315,7 +341,10 @@ async function uploadDocument(req, res) {
 async function deleteDocument(req, res) {
   const { personID, docName } = req.params;
 
-  if (!documentColumns.includes(docName)) {
+  const reverseMap = getNameMap(true);
+  const dbColumn = reverseMap[docName] || docName;
+
+  if (!documentColumns.includes(dbColumn)) {
     return res.status(400).json({ message: 'Invalid document name' });
   }
 
@@ -323,7 +352,7 @@ async function deleteDocument(req, res) {
     const request = pool.request();
     request.input('personID', sql.NVarChar, personID);
 
-    const query = `UPDATE dbo.talentpool SET ${docName} = NULL WHERE personID = @personID`;
+    const query = `UPDATE dbo.talentpool SET ${dbColumn} = NULL WHERE personID = @personID`;
     const result = await request.query(query);
 
     if (result.rowsAffected[0] > 0) {
@@ -335,7 +364,8 @@ async function deleteDocument(req, res) {
     console.error('Error deleting document:', err);
     res.status(500).json({ message: err.message || 'Internal Server Error' });
   }
-} 
+}
+
 async function checkID(req, res) {
   const id = req.params.id;
 
