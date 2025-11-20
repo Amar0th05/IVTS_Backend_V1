@@ -2,11 +2,13 @@ const express = require('express');
 const sql = require('mssql');
 const multer = require('multer');
 
-const { requestLeave,rejectLeaveForm,approveLeave,rejectLeave, getemployees, getManagerByEmployeeId } = require('../controllers/InternLeaveController');
+const { requestLeave,rejectLeaveForm,approveLeave,rejectLeave, getemployees, getManagerByEmployeeId , getSupportDocument} = require('../controllers/InternLeaveController');
 const InternLeaveRouter = express.Router();
 
 const storage=multer.memoryStorage();
 const upload = multer({storage});
+
+InternLeaveRouter.get("/document/:token", getSupportDocument);
 
 InternLeaveRouter.get('/getemployees', getemployees);
 // GET employee list (for dropdown)

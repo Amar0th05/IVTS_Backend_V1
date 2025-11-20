@@ -893,9 +893,8 @@ async function getReportingManager(req, res) {
             WHERE
                 [Designation] IN (
                     'Project Officer',
-                    'Project Officer',
-                    'Senior Project Officer',
                     'Principal Project Officer',
+                    'Senior Project officer'
                 );
     `);
 
