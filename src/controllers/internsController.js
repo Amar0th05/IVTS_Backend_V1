@@ -595,11 +595,11 @@ async function updateinternDetails(req, res) {
 
      if (data.reportingManager !== undefined) {
       updates.push("Reporting_Manager = @Reporting_Manager");
-      request.input("Reporting_Manager", sql.NVarChar(150), data.reportingManager);
+      request.input("Reporting_Manager", sql.NVarChar(150), data.reportingManager || null);
     }
      if (data. secondaryReportingManager !== undefined) {
       updates.push("secondaryReportingManager = @secondaryReportingManager");
-      request.input("secondaryReportingManager", sql.NVarChar(150), data.secondaryReportingManager);
+      request.input("secondaryReportingManager", sql.NVarChar(150), data.secondaryReportingManager || null);
     }
 
       if (data.stipendAmount !== undefined  && data.stipendAmount == "") {
