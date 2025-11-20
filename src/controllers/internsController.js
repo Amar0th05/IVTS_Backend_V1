@@ -376,7 +376,8 @@ async function getAllIntern(req, res) {
         [HowHeardAboutUs],
         [SubmissionDate],
         [status],
-        [stipend] AS stipendAmount
+        [stipend] AS stipendAmount,
+        [secondaryReportingManager]
       FROM dbo.internApplicants
     `;
  
@@ -437,7 +438,8 @@ async function getInternById(req, res) {
         [Reporting_Manager],
         [Acceptance_GenerateDate],
         [Completion_GenerateDate],
-        [stipend] AS stipendAmount
+        [stipend] AS stipendAmount,
+        [secondaryReportingManager]
       FROM dbo.internApplicants
       WHERE Id = @interId;
     `;
@@ -595,6 +597,10 @@ async function updateinternDetails(req, res) {
       updates.push("Reporting_Manager = @Reporting_Manager");
       request.input("Reporting_Manager", sql.NVarChar(150), data.reportingManager);
     }
+     if (data. secondaryReportingManager !== undefined) {
+      updates.push("secondaryReportingManager = @secondaryReportingManager");
+      request.input("secondaryReportingManager", sql.NVarChar(150), data.secondaryReportingManager);
+    }
 
       if (data.stipendAmount !== undefined  && data.stipendAmount == "") {
       updates.push("stipend = @stipend");
@@ -604,7 +610,6 @@ async function updateinternDetails(req, res) {
       updates.push("stipend = @stipend");
       request.input("stipend", sql.NVarChar(150), data.stipendAmount);
     }
-
     if (updates.length === 0) {
       return res.status(400).json({ message: "No fields provided for update" });
     }
@@ -894,7 +899,36 @@ async function getReportingManager(req, res) {
                 [Designation] IN (
                     'Project Officer',
                     'Principal Project Officer',
-                    'Senior Project officer'
+                    'Senior  Project officer',
+                    'Principal  Project officer'
+                );
+    `);
+
+    res.json({staffid:result.recordset});
+  } catch (err) {
+    console.error("Error fetching staff:", err);
+    res.status(500).json({ err: "Server error" });
+  }
+}
+
+
+// GET REPORTINGT MANAGER
+async function getReportingManager(req, res) {
+  console.log("getstaff enter");
+  try {
+    // ✅ SQL Server query to fetch all staff
+    const result = await pool.request().query(`
+      SELECT
+                [Employee_ID_if_already_assigned] AS id,
+                [Staff_Name] AS name
+            FROM
+                [dbo].[Staffs]
+            WHERE
+                [Designation] IN (
+                    'Project Officer',
+                    'Principal Project Officer',
+                    'Senior  Project officer',
+                    'Principal  Project officer'
                 );
     `);
 
