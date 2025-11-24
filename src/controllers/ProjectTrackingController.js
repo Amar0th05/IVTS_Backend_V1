@@ -21,9 +21,11 @@ async function getAllProjects(req,res){
                 p.ProjectID,
                 p.ProjectName,
                 p.ProjectIncharge,
+                c.ID as ClientID,
                 c.ClientName,
-                p.StartDate,
+                p.EstStartDate,
                 p.EstEndDate,
+                p.ActualStartDate,
                 p.ActualEndDate,
                 p.ProjectCost,
                 p.GST,
@@ -57,7 +59,30 @@ async function getAllProjects(req,res){
         res.status(500).json({ message: err.message || "Internal Server Error" });
     }
 }
+async function getProjectIncharge(req, res) {
+  console.log("getstaff enter");
+  try {
+    // ✅ SQL Server query to fetch all staff
+    const result = await pool.request().query(`
+      SELECT
+                [Employee_ID_if_already_assigned] AS id,
+                [Staff_Name] AS name
+            FROM
+                [dbo].[Staffs]
+            WHERE
+                [Designation] IN (
+                    'Project Officer',
+                    'Principal Project Officer',
+                    'Project Research Scientist'
+                );
+    `);
 
+    res.json({staffid:result.recordset});
+  } catch (err) {
+    console.error("Error fetching staff:", err);
+    res.status(500).json({ err: "Server error" });
+  }
+}
 
 async function getProjectById(req, res) {
     try {
@@ -73,12 +98,15 @@ async function getProjectById(req, res) {
                     p.ProjectName,
                     p.ProjectIncharge,
                     c.ClientName,
-                    p.StartDate,
+                    c.ID as ClientID,
+                    p.EstStartDate,
                     p.EstEndDate,
+                    p.ActualStartDate,
                     p.ActualEndDate,
                     p.ProjectCost,
                     p.GST,
                     p.NoOfDeliverables,
+                    p.NoOfPayments,
                     p.ProjectStatus,
                     p.TotalProjectCost
                 FROM tbl_project_tracking p
@@ -94,6 +122,13 @@ async function getProjectById(req, res) {
             .query(`
                 SELECT *
                 FROM tbl_project_deliverables
+                WHERE ProjectID = @projectID
+            `)).recordset;
+        project.Payments = (await pool.request()
+            .input('projectID', sql.VarChar, project.ProjectID)
+            .query(`
+                SELECT *
+                FROM tbl_project_payment_terms
                 WHERE ProjectID = @projectID
             `)).recordset;
 
@@ -126,8 +161,8 @@ async function createProject(req, res) {
             return res.status(400).json({ message: "At least one payment is required" });
         }
 
-        const requiredFields = ['ProjectID', 'ProjectName', 'ProjectIncharge', 'Client', 'StartDate', 'ActualEndDate', 'ProjectCost', 'GST', 'NoOfDeliverables', 'ProjectStatus'];
-        const requiredMap = ['Project Id', 'Project Name', 'Project Incharge', 'Client', 'Start Date', 'End Date', 'Project Cost', 'GST', 'Number Of Deliverables', 'Project Status'];
+        const requiredFields = ['ProjectID', 'ProjectName', 'ProjectIncharge', 'ClientName', 'EstStartDate', 'ActualEndDate', 'ProjectCost', 'GST', 'NoOfDeliverables', 'NoOfPayments', 'ProjectStatus'];
+        const requiredMap = ['Project Id', 'Project Name', 'Project Incharge', 'Client', 'Start Date', 'End Date', 'Project Cost', 'GST', 'Number Of Deliverables', 'Number Of Payments', 'Project Status'];
 
         const errors = [];
         requiredFields.forEach((field, index) => {
@@ -160,33 +195,43 @@ async function createProject(req, res) {
                 return res.status(400).json({ message: "Deliverable cost must be a positive number" });
             }
         }
+        for (let i = 0; i < payments.length; i++) {
+            const payment = payments[i];
+            if (!payment.description || payment.PaymentStatus == null) {
+                return res.status(400).json({ message: `Invalid data at payment ${i + 1}` });
+            }
+            if (payment.PaymentAmount != null && (isNaN(payment.PaymentAmount) || Number(payment.PaymentAmount) < 0)) {
+                return res.status(400).json({ message: "Payment amount must be a positive number" });
+            }
+        }
 
         await transaction.begin();
 
         const projectRequest = new sql.Request(transaction);
         const projectQuery = `
             INSERT INTO tbl_project_tracking (
-                ProjectID, ProjectName, ProjectIncharge, Client, StartDate, EstEndDate, ActualEndDate, 
-                NoOfDeliverables, ProjectCost, GST, ProjectStatus
+                ProjectID, ProjectName, ProjectIncharge, Client,EstStartDate, EstEndDate,ActualStartDate,ActualEndDate, NoOfDeliverables, NoOfPayments, ProjectCost, GST, ProjectStatus
             )
             OUTPUT INSERTED.ID
             VALUES (
-                @ProjectID, @ProjectName, @ProjectIncharge, @Client, @StartDate, @EstEndDate, 
-                @ActualEndDate, @NoOfDeliverables, @ProjectCost, @GST, @ProjectStatus
+                @ProjectID, @ProjectName, @ProjectIncharge, @Client, @EstStartDate, @EstEndDate, @ActualStartDate,
+                @ActualEndDate, @NoOfDeliverables, @NoOfPayments, @ProjectCost, @GST, @ProjectStatus
             );
         `;
 
         projectRequest
             .input('ProjectID',  data.ProjectID)
             .input('ProjectName',data.ProjectName)
-            .input('Client', data.Client)
+            .input('Client', data.ClientName)
             .input('ProjectIncharge',  data.ProjectIncharge)
-            .input('StartDate', data.StartDate)
+            .input('EstStartDate', data.EstStartDate)
             .input('EstEndDate', data.EstEndDate || null)
+            .input('ActualStartDate', data.ActualStartDate || null)
             .input('ActualEndDate',data.ActualEndDate || null)
             .input('ProjectCost', data.ProjectCost)
             .input('GST', data.GST)
             .input('NoOfDeliverables', data.NoOfDeliverables)
+            .input('NoOfPayments', data.NoOfPayments)
             .input('ProjectStatus', data.ProjectStatus);
 
         const projectResult = await projectRequest.query(projectQuery);
@@ -212,48 +257,19 @@ async function createProject(req, res) {
                 `);
         }
 
-        for (let index = 0; index < payments.length; index++) {
-            const payment = payments[index];
+        for (const payment of payments) {
             const paymentRequest = new sql.Request(transaction);
-
-            if (!payment.paymentDate) {
-                await transaction.rollback();
-                return res.status(400).json({ message: "Payment date is required" });
-            }
-            if (!payment.paymentTerm) {
-                await transaction.rollback();
-                return res.status(400).json({ message: "Payment terms are required" });
-            }
-
-
-            payment.GST = payment.GST || 0;
-            payment.costExcGST = payment.costExcGST || 0;
-            payment.paymentReceived = payment.paymentReceived || 0;
-
-
-            const file = files.find(f => f.fieldname === `payment_invoice_${index}`);
-
-            if(!file){
-                return res.status(400).json({ message: "Invoice is required" });
-            }
-            const invoiceBuffer = file.buffer;
-
             await paymentRequest
-                .input('ProjectID',  data.ProjectID)
-                .input('GST',  payment.GST)
-                .input('costExcGST',  payment.costExcGST)
-                .input('paymentDate', payment.paymentDate)
-                .input('paymentReceived', payment.paymentReceived)
-                .input('paymentTerm', payment.paymentTerm)
-                .input('totalCost', payment.totalCost)
-                .input('invoice', sql.VarBinary(sql.MAX), invoiceBuffer)
+                .input("ProjectID",  data.ProjectID)
+                .input("Description", payment.description)
+                .input("PaymentAmount",  payment.PaymentAmount || null)
+                .input("PaymentStatus",  payment.PaymentStatus)
                 .query(`
                     INSERT INTO tbl_project_payment_terms 
-                    (ProjectID, GST, Cost, PaymentReceivedDate, PaymentReceived, PaymentTerms, invoice)
-                    VALUES (@ProjectID, @GST, @costExcGST, @paymentDate, @paymentReceived, @paymentTerm, @invoice);
+                    (ProjectID, Description, PaymentAmount, PaymentStatus)
+                    VALUES (@ProjectID, @Description, @PaymentAmount, @PaymentStatus);
                 `);
         }
-
         await transaction.commit();
         return res.status(201).json({
             id: projectId,
@@ -322,16 +338,21 @@ async function updateProject(req,res){
             updates.push("ProjectIncharge=@ProjectIncharge");
         }
 
-        if(data.StartDate!==undefined){
-            request.input('StartDate',data.StartDate);
-            updates.push('StartDate=@StartDate');
+        if(data.EstStartDate!==undefined){
+            request.input('EstStartDate',data.EstStartDate);
+            updates.push('EstStartDate=@EstStartDate');
         }
 
         if(data.EstEndDate!==undefined && data.EstEndDate!==null && data.EstEndDate!==''){
             request.input('EstEndDate',data.EstEndDate);
             updates.push("EstEndDate=@EstEndDate");
         }
+        if(data.ActualStartDate!==undefined){
+            request.input('ActualStartDate',data.ActualStartDate);
+            updates.push("ActualStartDate=@ActualStartDate");
+        }
 
+        
         if(data.ActualEndDate!==undefined){
             request.input('ActualEndDate',data.ActualEndDate);
             updates.push("ActualEndDate=@ActualEndDate");
@@ -363,6 +384,14 @@ async function updateProject(req,res){
                updates.push('NoOfDeliverables=@NoOfDeliverables');
            }
        }
+         if(data.NoOfPayments!==undefined){
+                if(isNaN(Number(data.NoOfPayments))||Number(data.NoOfPayments)<1){
+                    return res.status(400).json({message:"Atleast one payment is required"});
+                }else{
+                    request.input('NoOfPayments',data.NoOfPayments);
+                    updates.push('NoOfPayments=@NoOfPayments');
+                }
+        }
 
        if(data.ProjectStatus!==undefined){
            request.input("ProjectStatus",data.ProjectStatus);
@@ -401,9 +430,17 @@ async function getProjectPaidStatus(req,res){
     try{
         let request=await pool.request();
         let query=`
-            select pt.TotalCost,pt.PaymentReceived,p.ProjectStatus  from tbl_project_payment_terms pt
-            left join tbl_project_tracking p on p.ProjectID=pt.ProjectID
-            where p.ProjectStatus in ('Ongoing','Completed');
+           SELECT 
+    pt.PaymentAmount,
+    pt.PaymentStatus,
+    p.ProjectStatus
+FROM tbl_project_payment_terms pt
+LEFT JOIN tbl_project_tracking p 
+    ON p.ProjectID = pt.ProjectID
+WHERE 
+    p.ProjectStatus IN ('Ongoing', 'Completed')
+    AND pt.PaymentStatus = 'Received';
+
         `;
         let result = await request.query(query);
         return res.status(200).json(result.recordset);
@@ -422,5 +459,6 @@ module.exports = {
     createProject,
     updateProject,
     getStatusCounts,
-    getProjectPaidStatus
+    getProjectPaidStatus,
+    getProjectIncharge
 }
