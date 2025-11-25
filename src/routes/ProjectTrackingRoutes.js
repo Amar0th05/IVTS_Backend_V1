@@ -4,8 +4,8 @@ const multer=require('multer');
 
 const upload = multer();
 
-const { getAllProjects,getProjectById,createProject,updateProject, getStatusCounts, getProjectPaidStatus} = require('../controllers/ProjectTrackingController');
-
+const { getAllProjects,getProjectById,createProject,updateProject, getStatusCounts, getProjectPaidStatus,getProjectIncharge} = require('../controllers/ProjectTrackingController');
+ProjectTrackingRouter.get('/getProjectIncharge', getProjectIncharge);
 ProjectTrackingRouter.get("/all",getAllProjects);
 ProjectTrackingRouter.get("/:id",getProjectById);
 ProjectTrackingRouter.post("/",upload.any(),createProject);

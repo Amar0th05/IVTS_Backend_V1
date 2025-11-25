@@ -128,8 +128,115 @@ async function createDeliverable(req, res) {
         return res.status(500).json({ message: err.message || "Internal Server Error" });
     }
 }
+async function updatePayment(req, res) {
+    try {
+        const request = await pool.request();
+        const data  = req.body;
+        console.log(data);
 
+        if (!data) {
+            return res.status(400).json({ message: "No inputs found to update" });
+        }
+        if (!data.ID) {
+            return res.status(400).json({ message: "Payment ID is missing" });
+        }
+
+        let updates = [];
+
+        request.input("ID", data.ID);
+
+        if (data.Description !== undefined) {
+            updates.push("Description=@Description");
+            request.input("Description", data.Description);
+        }
+
+        if (data.PaymentAmount !== undefined) {
+            updates.push("PaymentAmount=@PaymentAmount");
+            request.input("PaymentAmount", data.PaymentAmount);
+        }
+
+        if (data.PaymentStatus !== undefined) {
+            updates.push("PaymentStatus=@PaymentStatus");
+            request.input("PaymentStatus", data.PaymentStatus);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: "No valid fields found to update" });
+        }
+
+        const query = `UPDATE tbl_project_payment_terms SET ${updates.join(', ')} WHERE ID=@ID`;
+        const result = await request.query(query);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(400).json({ message: "No matching records found to update" });
+        }
+
+        return res.json({ message: "Payment updated successfully" });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+}
+
+
+async function createPayment(req, res) {
+    try {
+        const request = await pool.request();
+        const data = req.body;
+
+        if (!data) {
+            return res.status(400).json({ message: "No inputs found to create" });
+        }
+
+        if (!data.ProjectID) {
+            return res.status(400).json({ message: "Project ID is missing" });
+        }
+
+        if (!data.Description) {
+            return res.status(400).json({ message: "Description Name is missing" });
+        }
+
+        if (data.PaymentAmount === null || data.PaymentAmount === undefined) {
+            return res.status(400).json({ message: "Payment Amount is required" });
+        }
+
+        if (data.PaymentStatus == null || data.PaymentStatus === undefined) {
+            return res.status(400).json({ message: "Payment Status is required" });
+        }
+
+        console.log(data);
+
+        request.input("Description", data.Description);
+        request.input("PaymentAmount", data.PaymentAmount);
+        request.input("PaymentStatus", data.PaymentStatus);
+        request.input("ProjectID", data.ProjectID);
+
+        const result = await request.query(`
+            INSERT INTO tbl_project_payment_terms(
+                ProjectID, Description, PaymentAmount, PaymentStatus
+            ) VALUES (
+                         @ProjectID, @Description, @PaymentAmount, @PaymentStatus
+                     );
+
+            UPDATE tbl_project_tracking
+            SET NoOfPayments = NoOfPayments + 1
+            WHERE ProjectID = @ProjectID;
+        `);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(400).json({ message: "Unable to create Payments" });
+        }
+
+        return res.status(200).json({ message: 'Payment created successfully' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+}
 module.exports={
     updateDeliverable,
     createDeliverable,
+    updatePayment,
+    createPayment,
 }
