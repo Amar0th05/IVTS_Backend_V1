@@ -137,7 +137,7 @@ async function addStaffs(req,res){
     request.input('staffName',sql.NVarChar,data.staffName);
     request.input('dob',sql.Date,data.dateOfBirth);
     request.input('gender',sql.NVarChar,data.gender);
-    request.input('contactNumber',sql.NVarChar,data.contactNumber);
+    request.input('contactNumber',sql.BigInt,data.contactNumber);
     request.input('personalEmail',sql.NVarChar,data.personalEmail);
     request.input('emergencyContactName',sql.NVarChar,data.emergencyContactName);
     request.input('emergencyContactNumber',sql.NVarChar,data.emergencyContactNumber);
@@ -255,7 +255,7 @@ async function updateStaffs(req,res) {
 
         if (data.contactNumber !== undefined) {
             updates.push("Contact_Number = @Contact_Number");
-            request.input('Contact_Number', sql.Numeric(10, 0), data.contactNumber);
+            request.input('Contact_Number', sql.BigInt, data.contactNumber);
         }
 
         if (data.personalEmail !== undefined) {
