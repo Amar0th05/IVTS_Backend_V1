@@ -114,7 +114,7 @@ async function createDeliverable(req, res) {
                      );
 
             UPDATE tbl_project_tracking
-            SET NoOfDeliverables = NoOfDeliverables + 1
+            SET [NoOfDeliverables] = [NoOfDeliverables] + 1
             WHERE ProjectID = @ProjectID;
         `);
 
@@ -220,7 +220,7 @@ async function createPayment(req, res) {
                      );
 
             UPDATE tbl_project_tracking
-            SET NoOfPayments = NoOfPayments + 1
+            SET [NoOfPayments] = [NoOfPayments] + 1
             WHERE ProjectID = @ProjectID;
         `);
 
