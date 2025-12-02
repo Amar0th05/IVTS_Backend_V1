@@ -882,37 +882,6 @@ async function uploadDocument(req, res) {
   }
 }
  
-
-// get reporting manager
-// get all staff
-async function getReportingManager(req, res) {
-  console.log("getstaff enter");
-  try {
-    // ✅ SQL Server query to fetch all staff
-    const result = await pool.request().query(`
-      SELECT
-                [Employee_ID_if_already_assigned] AS id,
-                [Staff_Name] AS name
-            FROM
-                [dbo].[Staffs]
-            WHERE
-                [Designation] IN (
-                    'Project Officer',
-                    'Principal Project Officer',
-                    'Senior  Project officer',
-                    'Principal  Project officer',
-                    'Principal Project Scientist'
-                );
-    `);
-
-    res.json({staffid:result.recordset});
-  } catch (err) {
-    console.error("Error fetching staff:", err);
-    res.status(500).json({ err: "Server error" });
-  }
-}
-
-
 // GET REPORTINGT MANAGER
 async function getReportingManager(req, res) {
   console.log("getstaff enter");
