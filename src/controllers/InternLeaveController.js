@@ -176,13 +176,13 @@ export async function requestLeave(req, res) {
     );
 
     const managerQuery = `
-            SELECT 
-    s1.Reporting_Manager_Name AS managerName,
+    SELECT 
+    s2.Staff_Name AS managerName,
     s2.Official_Email_Address AS managerEmail
 FROM dbo.Staffs s1
 LEFT JOIN dbo.Staffs s2
-    ON LEFT(s1.Reporting_Manager_Name, CHARINDEX(' -', s1.Reporting_Manager_Name) - 1)
-       = s2.Employee_ID_if_already_assigned
+    ON s2.Employee_ID_if_already_assigned =
+        LEFT(s1.Reporting_Manager_Name, CHARINDEX(' -', s1.Reporting_Manager_Name) - 1)
 WHERE s1.Employee_ID_if_already_assigned = @employeeId
         `;
 
