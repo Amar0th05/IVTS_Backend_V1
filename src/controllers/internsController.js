@@ -900,7 +900,8 @@ async function getReportingManager(req, res) {
                     'Project Officer',
                     'Principal Project Officer',
                     'Senior  Project officer',
-                    'Principal  Project officer'
+                    'Principal  Project officer',
+                    'Principal Project Scientist'
                 );
     `);
 
@@ -928,7 +929,9 @@ async function getReportingManager(req, res) {
                     'Project Officer',
                     'Principal Project Officer',
                     'Senior  Project officer',
-                    'Principal  Project officer'
+                    'Principal  Project officer',
+                    'Principal Project Scientist'
+
                 );
     `);
 
