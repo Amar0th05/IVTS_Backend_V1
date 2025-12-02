@@ -13,6 +13,7 @@ const {
   createIntern,
   getReportingManager,
   generateDate,
+  updateInternStatus
 
 } = require('../controllers/internsController');
 
@@ -57,6 +58,7 @@ internsRouter.post('/:internId/documents/:docName', upload.single('file'), uploa
 internsRouter.put('/status/:id', toggleInternStatus);
 internsRouter.get('/:id', getInternById);
 internsRouter.post('/generateDate/:id',generateDate);
+internsRouter.put('/internstatus/:id',updateInternStatus);
 
 
 
