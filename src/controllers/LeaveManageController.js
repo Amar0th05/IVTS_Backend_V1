@@ -20,6 +20,7 @@ async function getLeaveSummary(req, res) {
         [Leave_ID] AS leaveId,
         [Employee_ID] AS employeeId,
         [Employee_Name] AS employeeName,
+        [Total_Days]AS totalDays,
         DATENAME(MONTH, [Leave_Start_Date]) AS month,  
         [Leave_Type] AS leaveType,
         [Status] AS leaveStatus                 
