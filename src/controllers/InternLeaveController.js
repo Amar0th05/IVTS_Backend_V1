@@ -24,6 +24,46 @@ let pool;
   }
 })();
 
+let contentTypes;
+
+// get Supporting Documnet
+export async function getSupportDocument(req, res){
+  try {
+    const pool = await getPool();
+    const request = pool.request();
+    request.input("token", sql.NVarChar(100), req.params.token);
+
+    const result = await request.query(`
+      SELECT SupportingDocument, SupportingDocumentName
+      FROM LeaveInfo
+      WHERE ApprovalToken = @token 
+         OR (ApprovalToken IS NULL AND SupportingDocument IS NOT NULL)
+      ORDER BY Leave_ID DESC   -- ✅ FIXED HERE
+    `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).send("No supporting document found.");
+    }
+
+    const file = result.recordset[0].SupportingDocument;
+    const fileName = result.recordset[0].SupportingDocumentName || "document.pdf";
+
+    // Detect file type
+    contentTypes = "application/octet-stream";
+    if (fileName.toLowerCase().endsWith(".pdf")) contentTypes = "application/pdf";
+    else if (fileName.toLowerCase().match(/\.(jpg|jpeg)$/)) contentTypes = "image/jpeg";
+    else if (fileName.toLowerCase().endsWith(".png")) contentTypes = "image/png";
+
+    res.setHeader("Content-Type", contentTypes);
+    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+    res.send(file);
+
+  } catch (err) {
+    console.error("❌ Error fetching document:", err);
+    res.status(500).send("Server error.");
+  }
+}
+
 // Function to get the reporting manager for a given employee ID
 export async function getManagerByEmployeeId(req, res) {
   const { employeeId } = req.params;
@@ -136,12 +176,14 @@ export async function requestLeave(req, res) {
     );
 
     const managerQuery = `
-            SELECT s1.Reporting_Manager_Name AS managerName,
-                   s2.Official_Email_Address AS managerEmail
-            FROM dbo.Staffs s1
-            LEFT JOIN dbo.Staffs s2
-              ON s1.Reporting_Manager_Name = s2.Staff_Name
-            WHERE s1.Employee_ID_if_already_assigned = @employeeId
+    SELECT 
+    s2.Staff_Name AS managerName,
+    s2.Official_Email_Address AS managerEmail
+FROM dbo.Staffs s1
+LEFT JOIN dbo.Staffs s2
+    ON s2.Employee_ID_if_already_assigned =
+        LEFT(s1.Reporting_Manager_Name, CHARINDEX(' -', s1.Reporting_Manager_Name) - 1)
+WHERE s1.Employee_ID_if_already_assigned = @employeeId
         `;
 
     const mgrResult = await mgrRequest.query(managerQuery);
@@ -159,45 +201,38 @@ export async function requestLeave(req, res) {
       return res.status(404).json({ message: "Manager email not found." });
     }
 
-    // Step 2: Insert leave request into LeaveInfo
-    const request = pool.request();
-    request.input("employeeId", sql.NVarChar(50), leaveData.employeeId.trim());
-    request.input(
-      "employeeName",
-      sql.NVarChar(100),
-      leaveData.employeeName.trim()
-    );
-    request.input("managerName", sql.NVarChar(100), managerName.trim());
-    request.input("leaveType", sql.NVarChar(100), leaveData.leaveType || "");
-    request.input("startDate", sql.Date, leaveData.startDate);
-    request.input("endDate", sql.Date, leaveData.endDate);
-    request.input("totalDays", sql.Float, leaveData.totalDays || 0);
-    request.input("halfDay", sql.NVarChar(50), leaveData.halfDayOption || null);
-    request.input(
-      "leaveReason",
-      sql.NVarChar(sql.MAX),
-      leaveData.leaveReason || null
-    );
-    request.input(
-      "supportingDocument",
-      sql.VarBinary(sql.MAX),
-      file ? file.buffer : null
-    );
-    request.input("status", sql.NVarChar(50), "Pending");
-    request.input("token", sql.NVarChar(100), token);
-    request.input("leaveStatus", sql.Int, 1); // 1 = Pending
+    // --- Step 2: Insert into DB ---
+        const request = pool.request();
+        request.input("employeeId", sql.NVarChar(50), leaveData.employeeId.trim());
+        request.input("employeeName", sql.NVarChar(100), leaveData.employeeName.trim());
+        request.input("managerName", sql.NVarChar(100), managerName.trim());
+        request.input("leaveType", sql.NVarChar(100), leaveData.leaveType || "");
+        request.input("startDate", sql.Date, leaveData.startDate);
+        request.input("endDate", sql.Date, leaveData.endDate);
+        request.input("totalDays", sql.Float, parseFloat(leaveData.totalDays) || 0);
+        request.input("halfDay", sql.NVarChar(50), leaveData.halfDayOption || null);
+        request.input("leaveReason", sql.NVarChar(sql.MAX), leaveData.leaveReason || null);
+        request.input("supportingDocument", sql.VarBinary(sql.MAX), file ? file.buffer : null);
+        request.input("supportingDocumentName", sql.NVarChar(255), file ? file.originalname : null);
+        request.input("status", sql.NVarChar(50), "Pending");
+        request.input("token", sql.NVarChar(100), token);
+        request.input("leaveStatus", sql.Int, 1);
 
-    await request.query(`
+        await request.query(`
             INSERT INTO LeaveInfo 
-            (Employee_ID, Employee_Name, Manager_Name, Leave_Type, Leave_Start_Date, Leave_End_Date, Total_Days, Half_Day, LeaveReason, SupportingDocument, Status, Leave_Status, ApprovalToken)
-            VALUES (@employeeId, @employeeName, @managerName, @leaveType, @startDate, @endDate, @totalDays, @halfDay, @leaveReason, @supportingDocument, @status, @leaveStatus, @token)
+            (Employee_ID, Employee_Name, Manager_Name, Leave_Type, Leave_Start_Date, Leave_End_Date, Total_Days, Half_Day, LeaveReason, SupportingDocument, SupportingDocumentName, Status, Leave_Status, ApprovalToken)
+            VALUES (@employeeId, @employeeName, @managerName, @leaveType, @startDate, @endDate, @totalDays, @halfDay, @leaveReason, @supportingDocument, @supportingDocumentName, @status, @leaveStatus, @token)
         `);
 
     // Step 3: Send email to manager
     leaveData.managerName = managerName; // ensure property name matches sendHRMail
     const employeeId = leaveData.employeeId; // ensure employee email is passed
+    if (file) {
+        leaveData.supportingDocument = file.buffer;       // REQUIRED for email checks
+        leaveData.supportingDocumentName = file.originalname;
+      }
     await sendHRMail(managerEmail, employeeId, leaveData, token);
-    console.log("✅ Leave email sent to manager successfully!");
+    console.log(" Leave email sent to manager successfully!");
 
     res.status(200).json({ message: "Leave request submitted successfully." });
   } catch (err) {
@@ -947,6 +982,36 @@ async function sendHRMail(to, employeeId, leave, token) {
   const formattedEnd = new Date(leave.endDate).toLocaleDateString();
   const submittedOn = new Date().toLocaleDateString();
 
+  // ✅ Build the document preview & link section
+  let documentLink;
+
+  if (leave.supportingDocument) {
+    const documentUrl = `${baseUrl}/internLeave/document/${token}`;
+    const isPDF =
+      leave.supportingDocumentName?.toLowerCase().endsWith(".pdf") ||
+      leave.supportingDocument?.toLowerCase().endsWith(".pdf");
+
+    documentLink = isPDF
+      ? `
+        <p><b>Supporting Document:</b>
+          <a href="${documentUrl}" target="_blank" style="color:#2563eb;text-decoration:underline;">View Document</a>
+        </p>
+        <p>
+          <iframe src="${documentUrl}" width="100%" height="500px"
+            style="border:1px solid #ccc;border-radius:8px;"></iframe>
+        </p>
+      `
+      : `
+        <p><b>Supporting Document:</b></p>
+        <a href="${documentUrl}" target="_blank">
+          <img src="${documentUrl}" alt="Supporting Document"
+            style="max-width:100%;border:1px solid #ccc;border-radius:8px;"/>
+        </a>
+      `;
+  } else {
+    documentLink = "<p><b>Supporting Document:</b> No document provided</p>";
+  }
+
   // --- 🔹 1️⃣ Fetch employee email from DB
   const empEmailQuery = `
     SELECT 
@@ -1000,6 +1065,8 @@ async function sendHRMail(to, employeeId, leave, token) {
           <li><b>Submitted On:</b> ${submittedOn}</li>
         </ul>
 
+        ${documentLink}
+
         <p>Please take action below:</p>
         <a href="${approveUrl}" style="background:#28a745;color:#fff;padding:10px 15px;border-radius:5px;text-decoration:none;">✅ Approve</a>
         <a href="${rejectUrl}" style="background:#dc3545;color:#fff;padding:10px 15px;border-radius:5px;text-decoration:none;margin-left:10px;">❌ Reject</a>
@@ -1010,6 +1077,23 @@ async function sendHRMail(to, employeeId, leave, token) {
       </div>
     `,
   };
+
+  // ✅ Attach the file (downloaded directly from your backend route)
+  if (leave.supportingDocument) {
+    try {
+      const fileUrl = `${baseUrl}/internLeave/document/${token}`;
+      const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+
+      managerMail.attachments = [
+        {
+          filename: leave.supportingDocumentName || "Supporting_Document.pdf",
+          content: Buffer.from(response.data),
+        },
+      ];
+    } catch (err) {
+      console.error("⚠️ Could not attach supporting document:", err.message);
+    }
+  }
 
   // --- 3️⃣ Mail to HR
   const hrMail = {
@@ -1045,6 +1129,22 @@ async function sendHRMail(to, employeeId, leave, token) {
     `,
   };
 
+    // ✅ Attach the file (downloaded directly from your backend route)
+  if (leave.supportingDocument) {
+    try {
+      const fileUrl = `${baseUrl}/internLeave/document/${token}`;
+      const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+
+      hrMail.attachments = [
+        {
+          filename: leave.supportingDocumentName || "Supporting_Document.pdf",
+          content: Buffer.from(response.data),
+        },
+      ];
+    } catch (err) {
+      console.error("⚠️ Could not attach supporting document:", err.message);
+    }
+  }
   // --- 4️⃣ Mail to Employee (only if found)
   const employeeMail = employeeEmail
     ? {
