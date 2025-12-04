@@ -89,48 +89,54 @@ async function getProjectById(req, res) {
         const id = parseInt(req.params.id);
         if (!id) return res.status(400).json({ message: "ID required" });
 
-        const project = (await pool.request()
-            .input('id', sql.Int, id)
-            .query(`
-                SELECT
-                    p.ID,
-                    p.ProjectID,
-                    p.ProjectName,
-                    p.ProjectIncharge,
-                    c.ClientName,
-                    c.ID as ClientID,
-                    p.EstStartDate,
-                    p.EstEndDate,
-                    p.ActualStartDate,
-                    p.ActualEndDate,
-                    p.ProjectCost,
-                    p.GST,
-                    p.NoOfDeliverables,
-                    p.NoOfPayments,
-                    p.ProjectStatus,
-                    p.TotalProjectCost
-                FROM tbl_project_tracking p
-                LEFT JOIN mmt_clients c ON p.Client = c.ID
-                WHERE p.ID = @id
-            `)).recordset[0];
+        // Fetch project details
+const project = (await pool.request()
+    .input('id', sql.Int, id)
+    .query(`
+        SELECT
+            p.ID,
+            p.ProjectID,
+            p.ProjectName,
+            p.ProjectIncharge,
+            c.ClientName,
+            c.ID as ClientID,
+            p.EstStartDate,
+            p.EstEndDate,
+            p.ActualStartDate,
+            p.ActualEndDate,
+            p.ProjectCost,
+            p.GST,
+            p.NoOfDeliverables,
+            p.NoOfPayments,
+            p.ProjectStatus,
+            p.TotalProjectCost
+        FROM tbl_project_tracking p
+        LEFT JOIN mmt_clients c ON p.Client = c.ID
+        WHERE p.ID = @id
+    `)).recordset[0];
 
-        if (!project) return res.status(404).json({ message: "Project not found" });
+// Fetch deliverables
+project.deliverables = (await pool.request()
+    .input('projectID', sql.VarChar, project.ProjectID)
+    .query(`
+        SELECT *
+        FROM tbl_project_deliverables
+        WHERE ProjectID = @projectID
+    `)).recordset;
 
+// Fetch payments
+project.Payments = (await pool.request()
+    .input('projectID', sql.VarChar, project.ProjectID)
+    .query(`
+        SELECT *
+        FROM tbl_project_payment_terms
+        WHERE ProjectID = @projectID
+    `)).recordset;
 
-        project.deliverables = (await pool.request()
-            .input('projectID', sql.VarChar, project.ProjectID)
-            .query(`
-                SELECT *
-                FROM tbl_project_deliverables
-                WHERE ProjectID = @projectID
-            `)).recordset;
-        project.Payments = (await pool.request()
-            .input('projectID', sql.VarChar, project.ProjectID)
-            .query(`
-                SELECT *
-                FROM tbl_project_payment_terms
-                WHERE ProjectID = @projectID
-            `)).recordset;
+// Count deliverables & payments
+project.NoOfDeliverables = project.deliverables.length;
+project.NoOfPayments = project.Payments.length;
+
 
         return res.status(200).json({ project });
 
@@ -376,22 +382,22 @@ async function updateProject(req,res){
            }
        }
 
-       if(data.NoOfDeliverables!==undefined){
-           if(isNaN(Number(data.NoOfDeliverables))||Number(data.NoOfDeliverables)<1){
-               return res.status(400).json({message:"Atleast one deliverable is required"});
-           }else{
-               request.input('NoOfDeliverables',data.NoOfDeliverables);
-               updates.push('NoOfDeliverables=@NoOfDeliverables');
-           }
-       }
-         if(data.NoOfPayments!==undefined){
-                if(isNaN(Number(data.NoOfPayments))||Number(data.NoOfPayments)<1){
-                    return res.status(400).json({message:"Atleast one payment is required"});
-                }else{
-                    request.input('NoOfPayments',data.NoOfPayments);
-                    updates.push('NoOfPayments=@NoOfPayments');
-                }
-        }
+    //    if(data.NoOfDeliverables!==undefined){
+    //        if(isNaN(Number(data.NoOfDeliverables))||Number(data.NoOfDeliverables)<1){
+    //            return res.status(400).json({message:"Atleast one deliverable is required"});
+    //        }else{
+    //            request.input('NoOfDeliverables',data.NoOfDeliverables);
+    //            updates.push('NoOfDeliverables=@NoOfDeliverables');
+    //        }
+    //    }
+    //      if(data.NoOfPayments!==undefined){
+    //             if(isNaN(Number(data.NoOfPayments))||Number(data.NoOfPayments)<1){
+    //                 return res.status(400).json({message:"Atleast one payment is required"});
+    //             }else{
+    //                 request.input('NoOfPayments',data.NoOfPayments);
+    //                 updates.push('NoOfPayments=@NoOfPayments');
+    //             }
+    //     }
 
        if(data.ProjectStatus!==undefined){
            request.input("ProjectStatus",data.ProjectStatus);
